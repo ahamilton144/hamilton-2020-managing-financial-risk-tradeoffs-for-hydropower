@@ -3,7 +3,7 @@
 
 This repository contains all code and data (included data for figures) for the following paper:
 
-Hamilton, A.L., Characklis, G.W., &amp; Reed, P.M. (2020). Managing financial risk tradeoffs for hydropower generation using snowpack-based index contracts. (in prep).
+Hamilton, A.L., Characklis, G.W., &amp; Reed, P.M. (2020). Managing financial risk tradeoffs for hydropower generation using snowpack-based index contracts (submitted manuscript).
 
 Licensed under the GNU General Public License v3.0. In building the multi-objective optimization (MOO) component of this code base, I borrowed and built upon sections of Julianne Quinn's [Lake Problem Direct Policy Search code](https://github.com/julianneq/Lake_Problem_DPS).
 
