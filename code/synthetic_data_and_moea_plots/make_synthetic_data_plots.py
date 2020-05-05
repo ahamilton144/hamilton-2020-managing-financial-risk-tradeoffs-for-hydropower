@@ -118,14 +118,6 @@ functions_revenues_contracts.plot_SweFebApr_SweGen_SweRev(dir_figs, swe, gen, re
 # payout for swe-based capped contract for differences (cfd), centered around 50th percentile
 importlib.reload(functions_revenues_contracts)
 print('Generating simulated CFD net payouts..., ', datetime.now() - startTime)
-payoutPutSim = functions_revenues_contracts.snow_contract_payout(dir_generated_inputs, sweWtSynth, contractType='put',
-                                                               lambdaRisk=0.25, strikeQuantile=0.5,
-                                                               redo=True, save = False)
-
-payoutShortCallSim = functions_revenues_contracts.snow_contract_payout(dir_generated_inputs, sweWtSynth,
-                                                                     contractType='shortcall', lambdaRisk=0.25,
-                                                                     strikeQuantile=0.5, redo=True, save = False)
-
 payoutCfdSim = functions_revenues_contracts.snow_contract_payout(dir_generated_inputs, sweWtSynth, contractType = 'cfd',
                                                                lambdaRisk = 0.25, strikeQuantile = 0.5,
                                                                capQuantile = 0.95, redo = True, save = False)
@@ -167,11 +159,18 @@ functions_revenues_contracts.plot_cfd_slope_effect(dir_figs, sweWtSynth, revSimW
 
 
 
-# ### save data
+# ### save data to use as inputs to moea for the current study
 print('Saving synthetic data..., ', datetime.now() - startTime)
-functions_revenues_contracts.save_synthetic_data(dir_generated_inputs, sweWtSynth, revSimWyr, payoutCfdSim)
+functions_revenues_contracts.save_synthetic_data_moea(dir_generated_inputs, sweWtSynth, revSimWyr, payoutCfdSim)
 
 print('Finished, ', datetime.now() - startTime)
 
 
+
+# ### save monthly generation & power data for future study
+print('Saving synthetic data..., ', datetime.now() - startTime)
+importlib.reload(functions_revenues_contracts)
+functions_revenues_contracts.save_synthetic_data_monthly(dir_generated_inputs, genSynth.gen, powSynth.powPrice)
+
+print('Finished, ', datetime.now() - startTime)
 
