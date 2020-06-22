@@ -213,7 +213,7 @@ def wang(df, contractType, lam, k, cap=-1., premOnly=False, lastYrTrig=-1., coun
 ############## Returns dataframe with net payout #########################################
 ##########################################################################
 
-def snow_contract_payout(dir_generated_inputs, sweWtSynth, contractType = 'put', lambdaRisk = 0.25, strikeQuantile = 0.6,
+def snow_contract_payout(dir_generated_inputs, sweWtSynth, contractType = 'put', label='Wt', lambdaRisk = 0.25, strikeQuantile = 0.6,
                        capQuantile = 0.95, redo = False, save = False):
 
   if (redo):
@@ -239,7 +239,7 @@ def snow_contract_payout(dir_generated_inputs, sweWtSynth, contractType = 'put',
                                            contractType='shortcall', lam=0, k=sweWtSynth.quantile(strikeQuantile),
                                            cap=sweWtSynth.quantile(capQuantile), premOnly=False)
       if (save):
-        snowPayoutSim.to_pickle(dir_generated_inputs + 'payoutCfdSim.pkl')
+        snowPayoutSim.to_pickle(dir_generated_inputs + 'payoutCfd%sSim.pkl' % label)
 
   else:
     if (contractType == 'put'):
@@ -249,7 +249,7 @@ def snow_contract_payout(dir_generated_inputs, sweWtSynth, contractType = 'put',
       save_location = dir_generated_inputs + 'payoutShortCall%sSim.pkl' % int(strikeQuantile * 100)
       snowPayoutSim = pd.read_pickle(save_location)
     elif (contractType == 'cfd'):
-      snowPayoutSim = pd.read_pickle(dir_generated_inputs + 'payoutCfdSim.pkl')
+      snowPayoutSim = pd.read_pickle(dir_generated_inputs + 'payoutCfd%sSim.pkl' % label)
 
   return (snowPayoutSim)
 
@@ -261,17 +261,17 @@ def snow_contract_payout(dir_generated_inputs, sweWtSynth, contractType = 'put',
 ############## Returns dataframe with premium shift for each lambda #########################################
 ##########################################################################
 
-def snow_contract_payout_shift_lambda(sweWtSynth, lam_list, contractType, lambdaRisk, strikeQuantile):
+def snow_contract_payout_shift_lambda(sweVal, lam_list, contractType, lambdaRisk, strikeQuantile):
   if (contractType == 'cfd'):
-    strike = sweWtSynth.quantile(strikeQuantile)
-    prob = 1/sweWtSynth.shape[0]
+    strike = sweVal.quantile(strikeQuantile)
+    prob = 1/sweVal.shape[0]
     # first get prem for base case
-    prem_base = wang(pd.DataFrame({'asset': sweWtSynth, 'prob': prob}), contractType='put',
+    prem_base = wang(pd.DataFrame({'asset': sweVal, 'prob': prob}), contractType='put',
                      lam=lambdaRisk, k=strike, premOnly=True)
     # now get shift for every lambda in dataset
     lam_prem_shift = np.empty(lam_list.shape[0])
     for i in range(lam_list.shape[0]):
-      lam_prem_shift[i] = wang(pd.DataFrame({'asset': sweWtSynth, 'prob': prob}), contractType='put',
+      lam_prem_shift[i] = wang(pd.DataFrame({'asset': sweVal, 'prob': prob}), contractType='put',
                                lam=lam_list[i], k=strike, premOnly=True, count=i) - prem_base
 
   return (lam_prem_shift)
@@ -284,14 +284,14 @@ def snow_contract_payout_shift_lambda(sweWtSynth, lam_list, contractType, lambda
 ######### plot snow contract types (fig 5/S3) ###########
 ############## Returns figure #########################################
 ##########################################################################
-def plot_contract(dir_figs, sweWtSynth, payoutPutSim, payoutShortCallSim, payoutCfdSim, lambda_shifts, plot_type):
+def plot_contract(dir_figs, sweVal, payoutPutSim, payoutShortCallSim, payoutCfdSim, lambda_shifts, plot_type):
 
-  strike = sweWtSynth.quantile(0.5)
-  prob = 1 / sweWtSynth.shape[0]
+  strike = sweVal.quantile(0.5)
+  prob = 1 / sweVal.shape[0]
   # first get prem for base case
-  prem_base = wang(pd.DataFrame({'asset': sweWtSynth, 'prob': prob}), contractType='put', lam=0.25, k=strike, premOnly=True)
+  prem_base = wang(pd.DataFrame({'asset': sweVal, 'prob': prob}), contractType='put', lam=0.25, k=strike, premOnly=True)
   for i in range(len(lambda_shifts)):
-    lambda_shifts[i] = prem_base - wang(pd.DataFrame({'asset': sweWtSynth, 'prob': prob}), contractType='put',
+    lambda_shifts[i] = prem_base - wang(pd.DataFrame({'asset': sweVal, 'prob': prob}), contractType='put',
                                         lam=lambda_shifts[i], k=strike, premOnly=True)
 
   ### plot regime as function of debt and uncertain params
@@ -307,7 +307,7 @@ def plot_contract(dir_figs, sweWtSynth, payoutPutSim, payoutShortCallSim, payout
   ax.tick_params(axis='y', which='both', labelleft=False,labelright=False)
   # ax.xaxis.set_label_position('top')
 
-  sbn.kdeplot(sweWtSynth, ax=ax, c='k', lw=2)
+  sbn.kdeplot(sweVal, ax=ax, c='k', lw=2)
 
   ax = plt.subplot2grid((3, 1), (1, 0), rowspan=2)
   ax.set_xlabel('SWE Index (inch)')
@@ -316,7 +316,7 @@ def plot_contract(dir_figs, sweWtSynth, payoutPutSim, payoutShortCallSim, payout
   ax.tick_params(axis='y', which='both', labelleft=False,labelright=False)
   ax.axhline(0, color='grey', linestyle=':')
   kinkY = np.min(payoutCfdSim)
-  kinkX = np.min(sweWtSynth.loc[payoutCfdSim < kinkY + eps])
+  kinkX = np.min(sweVal.loc[payoutCfdSim < kinkY + eps])
   line3, = ax.plot([0, kinkX, 60], [kinkX + kinkY, kinkY, kinkY], color=col[0], linewidth=2)
   if (plot_type == 'lambda'):
     line4, = ax.plot([0, kinkX, 60], [kinkX + kinkY + lambda_shifts[0], kinkY + lambda_shifts[0], kinkY + lambda_shifts[0]], color=col[0], ls='--', linewidth=2)
@@ -326,13 +326,13 @@ def plot_contract(dir_figs, sweWtSynth, payoutPutSim, payoutShortCallSim, payout
   elif (plot_type=='composite'):
     # plot put
     kinkY = np.min(payoutPutSim)
-    kinkX = np.min(sweWtSynth.loc[payoutPutSim < kinkY + eps])
+    kinkX = np.min(sweVal.loc[payoutPutSim < kinkY + eps])
     line1, = ax.plot([0, kinkX, 60], [kinkX + kinkY, kinkY, kinkY], color=col[3],  lw=2, ls='--')
     # plot shortcall
     kinkStrikeY = np.max(payoutShortCallSim)
-    kinkStrikeX = np.max(sweWtSynth.loc[payoutShortCallSim > kinkStrikeY - eps])
+    kinkStrikeX = np.max(sweVal.loc[payoutShortCallSim > kinkStrikeY - eps])
     kinkCapY = np.min(payoutShortCallSim)
-    kinkCapX = np.min(sweWtSynth.loc[payoutShortCallSim < kinkCapY + eps])
+    kinkCapX = np.min(sweVal.loc[payoutShortCallSim < kinkCapY + eps])
     line2, = ax.plot([0, kinkStrikeX, kinkCapX, 60], [kinkStrikeY, kinkStrikeY, kinkCapY, kinkCapY], color=col[2], lw=2, ls='--')
     plt.legend([line1,line2,line3],['Long put','Short capped call','Capped contract for differences'],loc='lower left')
     plot_name = dir_figs + 'figS3.jpg'
@@ -483,9 +483,10 @@ def plot_cfd_slope_effect(dir_figs, sweWtSynth, revSimWyr, payoutCfdSim, meanRev
 ######### save synthetic data needed for moea ###########
 ############## Saves csv, no return #########################################
 ##########################################################################
-def save_synthetic_data_moea(dir_generated_inputs, sweWtSynth, revSimWyr, payoutCfdSim):
-  synthetic_data = pd.DataFrame({'swe': sweWtSynth.values, 'revenue': revSimWyr.values,
-                       'payoutCfd': payoutCfdSim.values}).iloc[1:, :].reset_index(drop=True)[['swe', 'revenue', 'payoutCfd']]
+def save_synthetic_data_moea(dir_generated_inputs, sweSynth, revSimWyr, payoutFebSim, payoutAprSim):
+  synthetic_data = pd.DataFrame({'sweFeb': sweSynth.danFeb.values, 'sweApr': sweSynth.danApr.values, 'revenue': revSimWyr.values,
+                       'cfdFeb': payoutFebSim.values, 'cfdApr': payoutAprSim.values
+                       }).iloc[1:, :].reset_index(drop=True)[['sweFeb', 'sweApr', 'revenue', 'cfdFeb','cfdApr']]
   synthetic_data.to_csv(dir_generated_inputs + 'synthetic_data.txt',sep=' ', index=False)
 
 

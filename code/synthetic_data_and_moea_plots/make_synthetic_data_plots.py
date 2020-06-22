@@ -52,7 +52,7 @@ hp_GWh, hp_dolPerKwh, hp_dolM = functions_clean_data.get_historical_SFPUC_sales(
 # # SWE, Feb 1 & Apr 1
 print('Generating synthetic swe..., ', datetime.now() - startTime)
 importlib.reload(functions_synthetic_data)
-sweSynth = functions_synthetic_data.synthetic_swe(dir_generated_inputs, swe, redo = False, save = False)
+sweSynth = functions_synthetic_data.synthetic_swe(dir_generated_inputs, swe, redo = True, save = True)
 
 # monthly generation, dependent on swe. Will also create fig S2, showing fitted models (gen as fn of swe) for each month.
 print('Generating synthetic hydropower generation..., ', datetime.now() - startTime)
@@ -74,7 +74,7 @@ print('Generating simulated revenues..., ', datetime.now() - startTime)
 importlib.reload(functions_revenues_contracts)
 revHist, powHistSample, revSim = functions_revenues_contracts.simulate_revenue(dir_generated_inputs, gen, hp_GWh,
                                                                            hp_dolPerKwh, genSynth, powSynth,
-                                                                           redo = True, save = True)
+                                                                           redo = False, save = False)
 
 
 # get index from swe/revenue relationship.
@@ -130,44 +130,59 @@ print('Generating simulated CFD net payouts..., ', datetime.now() - startTime)
 #                                                                      contractType='shortcall', lambdaRisk=0.25,
 #                                                                      strikeQuantile=0.5, redo=True, save = False)
 
-payoutCfdSim = functions_revenues_contracts.snow_contract_payout(dir_generated_inputs, sweWtSynth, contractType = 'cfd',
+# payoutCfdSim = functions_revenues_contracts.snow_contract_payout(dir_generated_inputs, sweWtSynth, contractType = 'cfd',
+#                                                                lambdaRisk = 0.25, strikeQuantile = 0.5,
+#                                                                capQuantile = 0.95, redo = True, save = False)
+
+payoutFebSim = functions_revenues_contracts.snow_contract_payout(dir_generated_inputs, sweSynth.danFeb, contractType = 'cfd',
                                                                lambdaRisk = 0.25, strikeQuantile = 0.5,
-                                                               capQuantile = 0.95, redo = True, save = False)
+                                                               capQuantile = 0.95, redo = True, save = True)
+payoutAprSim = functions_revenues_contracts.snow_contract_payout(dir_generated_inputs, sweSynth.danApr, contractType = 'cfd',
+                                                               lambdaRisk = 0.25, strikeQuantile = 0.5,
+                                                               capQuantile = 0.95, redo = True, save = True)
 
 ### get historical swe, gen, power price, revenue, net revenue. Period of record for hydropower = WY 1988-2016
-historical_data = pd.DataFrame({'swe': swe.loc[revHistWyr.index,:].avg})
+historical_data = pd.DataFrame({'sweFeb': swe.loc[revHistWyr.index,:].danFeb, 'sweApr': swe.loc[revHistWyr.index,:].danApr})
 historical_data['gen'] = genHistWyr.tot.values/1000
 powHistWyr.index = revHistWyr.index
 historical_data['pow'] = powHistWyr
 historical_data['rev'] = revHistWyr.rev
 historical_data['netrev'] = historical_data['rev'] - (meanRevenue * fixedCostFraction)
 # get unit swe payout for historic data
-kinkY = np.min(payoutCfdSim)
-kinkX = np.min(sweWtSynth.loc[payoutCfdSim < kinkY + eps])
 def payout(swe_value, kinkX, kinkY):
     if (swe_value >= kinkX):
         return kinkY 
     else:
         return kinkY + (kinkX - swe_value)
-historical_data['cfd'] = [payout(x, kinkX, kinkY) for x in historical_data['swe']]
+kinkY = np.min(payoutFebSim)
+kinkX = np.min(sweSynth.danFeb.loc[payoutFebSim < kinkY + eps])
+historical_data['cfdFeb'] = [payout(x, kinkX, kinkY) for x in historical_data['sweFeb']]
+kinkY = np.min(payoutAprSim)
+kinkX = np.min(sweSynth.danApr.loc[payoutAprSim < kinkY + eps])
+historical_data['cfdApr'] = [payout(x, kinkX, kinkY) for x in historical_data['sweApr']]
+
 historical_data.index = np.arange(1988, 2017)
 historical_data.to_csv(dir_generated_inputs + 'historical_data.csv')
 
-# # ### get shift in cfd net payout function based on lambda, relative to baseline payouts with lambda = 0.25. Note, we do put here, since sell_call side of swap uses lambda=0 and will just be a constant shift.
-# # read in lambdas from LHC sample
-# importlib.reload(functions_revenues_contracts)
-# print('Generating CFD loading shifts for different lambda values in sensitivity analysis..., ', datetime.now() - startTime)
-# param_list = pd.read_csv(dir_generated_inputs + 'param_LHC_sample.txt', sep=' ',
-#                          header=None, names=['c','delta','Delta_fund','Delta_debt','lam'])
-# # get premium shift for each lambda in dataset
-# lam_prem_shift = functions_revenues_contracts.snow_contract_payout_shift_lambda(sweWtSynth,
-#                                                                      param_list.iloc[:,-1].values, contractType = 'cfd',
-#                                                                      lambdaRisk = 0.25, strikeQuantile = 0.5)
-# param_list['lam_prem_shift'] = lam_prem_shift
-# param_list.to_csv(dir_generated_inputs + 'param_LHC_sample_withLamPremShift.txt', sep=' ', header=True, index=False)
+# ### get shift in cfd net payout function based on lambda, relative to baseline payouts with lambda = 0.25. Note, we do put here, since sell_call side of swap uses lambda=0 and will just be a constant shift.
+# read in lambdas from LHC sample
+importlib.reload(functions_revenues_contracts)
+print('Generating CFD loading shifts for different lambda values in sensitivity analysis..., ', datetime.now() - startTime)
+param_list = pd.read_csv(dir_generated_inputs + 'param_LHC_sample.txt', sep=' ',
+                         header=None, names=['c','delta','Delta_fund','Delta_debt','lam'])
+# get premium shift for each lambda in dataset
+lam_prem_shift = functions_revenues_contracts.snow_contract_payout_shift_lambda(sweSynth.danFeb,
+                                                                     param_list.lam.values, contractType = 'cfd',
+                                                                     lambdaRisk = 0.25, strikeQuantile = 0.5)
+param_list['lam_prem_shift_Feb'] = lam_prem_shift
+lam_prem_shift = functions_revenues_contracts.snow_contract_payout_shift_lambda(sweSynth.danApr,
+                                                                     param_list.lam.values, contractType = 'cfd',
+                                                                     lambdaRisk = 0.25, strikeQuantile = 0.5)
+param_list['lam_prem_shift_Apr'] = lam_prem_shift
+param_list.to_csv(dir_generated_inputs + 'param_LHC_sample_withLamPremShift.txt', sep=' ', header=True, index=False)
 
 
-# ### plot CFD contract as composite of put contract and short capped call contract (Fig S3)
+### plot CFD contract as composite of put contract and short capped call contract (Fig S3)
 # importlib.reload(functions_revenues_contracts)
 # print('Plotting CFD contract as composite of put contract and short capped call contract (Fig S3)..., ', datetime.now() - startTime)
 # functions_revenues_contracts.plot_contract(dir_figs, sweWtSynth, payoutPutSim, payoutShortCallSim, payoutCfdSim,
@@ -189,11 +204,11 @@ historical_data.to_csv(dir_generated_inputs + 'historical_data.csv')
 
 
 
-# # ### save data to use as inputs to moea for the current study
-# print('Saving synthetic data..., ', datetime.now() - startTime)
-# functions_revenues_contracts.save_synthetic_data_moea(dir_generated_inputs, sweWtSynth, revSimWyr, payoutCfdSim)
+# ### save data to use as inputs to moea for the current study
+print('Saving synthetic data..., ', datetime.now() - startTime)
+functions_revenues_contracts.save_synthetic_data_moea(dir_generated_inputs, sweSynth, revSimWyr, payoutFebSim, payoutAprSim)
 
-# print('Finished, ', datetime.now() - startTime)
+print('Finished, ', datetime.now() - startTime)
 
 
 
