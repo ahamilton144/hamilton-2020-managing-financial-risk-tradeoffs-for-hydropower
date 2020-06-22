@@ -131,7 +131,7 @@ def plot_pareto_baseline(dir_figs, moea_solns, p_sfpuc, cases_sfpuc_index):
   plt.legend([m2,m1], ['Fund','Fund+CFD'], loc='upper left')
   plt.ylabel(r"$\leftarrow$ Q95 Max Debt $\left(J^{debt}\right)$")
   plt.xlabel(r"Expected Annualized Cash Flow $\left(J^{cash}\right)\rightarrow$")
-  plt.savefig(dir_figs + 'fig8.png', bbox_inches='tight', dpi=1200)
+  plt.savefig(dir_figs + 'fig8.jpg', bbox_inches='tight', dpi=1200)
 
 
 
@@ -159,20 +159,23 @@ def get_cashflow_post_withdrawal(fund_balance, cash_in, cashflow_target, maxFund
 ######### Run single random simulation with given cfd slope & max fund  ###########
 ############## Return set of objectives #########################################
 ##########################################################################
-def single_sim_objectives(revenue_sample, payoutCfd_sample, fixedCostFraction, meanRevenue, maxFund, slopeCfd, 
+def single_sim(revenue_sample, payoutCfd_sample, fixedCostFraction, meanRevenue, maxFund, slopeCfd, 
                         interestFund, interestDebt, lambdaCfdPremiumShift, discFactor, discNorm, nYears):
 
   net_revenue = revenue_sample - meanRevenue * fixedCostFraction
   fund_balance = [0]  # reserve fund balance starts at zero
   debt = [0]  # debt starts at zero
   withdrawal = []  # withdrawal
+  net_payout = []
+  cash_in = []
   final_cashflow = []  # net_revenue post
   for i in range(0, nYears):
+    net_payout.append(slopeCfd * (payoutCfd_sample[i] - lambdaCfdPremiumShift))
     # cash flow after recieving revenues (net of fixed cost), plus net payout cfd, minus debt (plus interest) from last year
-    cash_in = net_revenue[i] + slopeCfd * (payoutCfd_sample[i] - lambdaCfdPremiumShift) - debt[i] * interestDebt
+    cash_in.append(net_revenue[i] + net_payout[i] - debt[i] * interestDebt)
     # rule for withdrawal (or deposit), after growing fund at interestFund from last year
-    final_cashflow.append(get_cashflow_post_withdrawal(fund_balance[i] * interestFund, cash_in, 0, maxFund))
-    withdrawal.append(final_cashflow[i] - cash_in)
+    final_cashflow.append(get_cashflow_post_withdrawal(fund_balance[i] * interestFund, cash_in[i], 0, maxFund))
+    withdrawal.append(final_cashflow[i] - cash_in[i])
     fund_balance.append(fund_balance[i] * interestFund - withdrawal[i])  # adjust reserve based on withdrawal (deposit)
     # if insufficient cash to pay off debt and still be above costs, take on more debt, which grows by interestDebt next year
     if (final_cashflow[i] < -eps):
@@ -180,6 +183,23 @@ def single_sim_objectives(revenue_sample, payoutCfd_sample, fixedCostFraction, m
       final_cashflow[i] = 0.0
     else:
       debt.append(0)
+
+  return(net_revenue, net_payout, cash_in, fund_balance, debt, withdrawal, final_cashflow)
+
+
+
+
+##########################################################################
+######### Run single random simulation with given cfd slope & max fund  ###########
+############## Return set of objectives #########################################
+##########################################################################
+def single_sim_objectives(revenue_sample, payoutCfd_sample, fixedCostFraction, meanRevenue, maxFund, slopeCfd, 
+                        interestFund, interestDebt, lambdaCfdPremiumShift, discFactor, discNorm, nYears):
+
+  net_revenue, net_payout, cash_in, fund_balance, debt, withdrawal, final_cashflow = single_sim(revenue_sample, payoutCfd_sample, fixedCostFraction, meanRevenue, 
+                                                                            maxFund, slopeCfd, interestFund, interestDebt, lambdaCfdPremiumShift,
+                                                                            discFactor, discNorm, nYears)
+
 
   # sub-objectives for simulation
   objectives_1sim = []
@@ -227,6 +247,156 @@ def monte_carlo_objectives(synthetic_data, fixedCostFraction, meanRevenue, maxFu
                      np.quantile(objectives_1sim[1::3],0.95),
                      np.mean(objectives_1sim[2::3])]
     return(objectives_mc)
+
+
+
+
+#########################################################################
+######### plot distribution of state variables over historical period for 3 cases, baseline params (fig 9) ####
+### outputs plot, no return. ####
+# ##########################################################################
+def plot_example_simulations(dir_figs, moea_solns_filtered, params_sfpuc, cases_sfpuc_index, historical_data, meanRevenue):
+  solns = moea_solns_filtered.iloc[cases_sfpuc_index,:]
+  fixedCostFraction = params_sfpuc['c']
+  discountRate = 1 / (params_sfpuc['delta'] / 100 + 1)
+  interestFund = (params_sfpuc['Delta_fund'] + params_sfpuc['delta']) / 100 + 1
+  interestDebt = (params_sfpuc['Delta_debt'] + params_sfpuc['delta']) / 100 + 1
+  lambdaCfdPremiumShift = params_sfpuc['lam_prem_shift']
+  nYears = historical_data.shape[0]
+  discFactor = discountRate ** np.array(range(1,nYears+1))
+  discNorm = 1 / np.sum(discFactor)
+
+  fig = plt.figure(figsize=(6,10))
+  gs1 = fig.add_gridspec(nrows=4, ncols=2, left=0, right=1, wspace=0.05, hspace=0.1)
+
+  ax = fig.add_subplot(gs1[0,0])
+  ax.annotate('a)', xy=(0.01, 0.89), xycoords='axes fraction')
+  ax.set_ylabel('SWE Index\n(inch)')
+  ax.set_xlabel('Year')
+  ax.set_yticks([10,25,40])
+  # ax.set_xticks(np.arange(0.85, 0.98, 0.04))
+  ax.tick_params(axis='y',which='both',labelleft=True,labelright=False)
+  ax.tick_params(axis='x',which='both',labelbottom=False,labeltop=True)
+  ax.xaxis.set_label_position('top')
+  # ax.yaxis.set_label_position('right')
+  plt.plot(historical_data['swe'], c='k')
+
+  ax0 = fig.add_subplot(gs1[0,1], sharex=ax)
+  ax0.annotate('b)', xy=(0.01, 0.89), xycoords='axes fraction')
+  ax0.set_ylabel('Generation\n(TWh)', rotation=270, labelpad=35)
+  ax0.set_xlabel('Year')
+  ax0.set_yticks([1.2, 1.7, 2.2])
+  ax0.tick_params(axis='y',which='both',labelleft=False,labelright=True)
+  ax0.tick_params(axis='x',which='both',labelbottom=False,labeltop=True)
+  ax0.xaxis.set_label_position('top')
+  ax0.yaxis.set_label_position('right')
+  ax0.plot(historical_data['gen'], c='k')
+
+  ax0 = fig.add_subplot(gs1[1,0], sharex=ax)
+  ax0.annotate('c)', xy=(0.01, 0.89), xycoords='axes fraction')
+  ax0.set_ylabel('Wholesale Price\n(\$/MWh)')
+  # ax0.set_xlabel('Year')
+  # ax0.set_xticks(np.arange(0.85, 0.98, 0.04))
+  ax0.tick_params(axis='y',which='both',labelleft=True,labelright=False)
+  ax0.tick_params(axis='x',which='both',labelbottom=False,labeltop=False)
+  # ax0.xaxis.set_label_position('top')
+  # ax0.yaxis.set_label_position('right')
+  ax0.plot(historical_data['pow'], c='k')
+
+  ax0 = fig.add_subplot(gs1[1,1], sharex=ax)
+  ax0.annotate('d)', xy=(0.01, 0.89), xycoords='axes fraction')
+  ax0.set_ylabel('Net Revenue\n(\$M)', rotation=270, labelpad=35)
+  # ax0.set_xlabel('Year')
+  # ax0.set_xticks(np.arange(0.85, 0.98, 0.04))
+  ax0.tick_params(axis='y',which='both',labelleft=False,labelright=True)
+  ax0.tick_params(axis='x',which='both',labelbottom=False,labeltop=False)
+  # ax0.xaxis.set_label_position('top')
+  ax0.yaxis.set_label_position('right')
+  ax0.axhline(0, color='0.5', ls=':', zorder=1)
+  l0, = ax0.plot(historical_data['netrev'], c='k')
+
+  ax1 = fig.add_subplot(gs1[2,0], sharex=ax)
+  ax2 = fig.add_subplot(gs1[2,1], sharex=ax)
+  ax3 = fig.add_subplot(gs1[3,0], sharex=ax)
+  ax4 = fig.add_subplot(gs1[3,1], sharex=ax)
+
+  # ax1 = plt.subplot2grid((4,2),(2,0),sharex=ax)#,rowspan=2,colspan=2)
+  # ax2 = plt.subplot2grid((4,2),(2,1),sharex=ax)#,rowspan=2,colspan=2)
+  # ax3 = plt.subplot2grid((4,2),(3,0),sharex=ax)#,rowspan=2,colspan=2)
+  # ax4 = plt.subplot2grid((4,2),(3,1),sharex=ax)#,rowspan=2,colspan=2)
+
+
+  for i in range(3):
+    vals = single_sim(historical_data['rev'].values, historical_data['cfd'].values, params_sfpuc['c'], meanRevenue,
+                                                  solns['max_fund'].iloc[i], solns['slope_cfd'].iloc[i], 
+                                                  interestFund, interestDebt, params_sfpuc['lam_prem_shift'], 
+                                                  discFactor, discNorm, nYears)
+
+    cfd, fund, debt, wd, cf4 = vals[1], vals[3], vals[4], vals[5], vals[6]
+
+    #     objs = single_sim_objectives(historical_data['rev'].values, historical_data['cfd'].values, params_sfpuc['c'], meanRevenue,
+#                                                   solns['max_fund'].iloc[i], solns['slope_cfd'].iloc[i], 
+#                                                   interestFund, interestDebt, params_sfpuc['lam_prem_shift'], 
+#                                                   discFactor, discNorm, nYears)
+    
+    if i==0:
+      ax1.annotate('e)', xy=(0.01, 0.89), xycoords='axes fraction')
+      ax1.set_ylabel('CFD Payout\n(\$M)')
+      # ax.set_xlabel('Year')
+      # ax.set_xticks(np.arange(0.85, 0.98, 0.04))
+      ax1.tick_params(axis='y',which='both',labelleft=True,labelright=False)
+      ax1.tick_params(axis='x',which='both',labelbottom=False,labeltop=False)
+      # ax.xaxis.set_label_position('top')
+      # ax.yaxis.set_label_position('right')
+      ax1.set_yticks([-15,0,15])
+      ax1.axhline(0, color='0.5', ls=':', zorder=1)
+      l1, = ax1.plot(range(1988,2017), cfd, c=col[i+1])
+    elif i == 1:
+      l2, = ax1.plot(range(1988,2017), cfd, c=col[i+1])
+    else:
+      l3, = ax1.plot(range(1988,2017), cfd, c=col[i+1])
+
+    if i==0:
+      ax2.annotate('f)', xy=(0.01, 0.89), xycoords='axes fraction')
+      ax2.set_ylabel('Fund Balance\n(\$M)', rotation=270, labelpad=35)
+      # ax.set_xlabel('Year')
+      # ax.set_xticks(np.arange(0.85, 0.98, 0.04))
+      ax2.tick_params(axis='y',which='both',labelleft=False,labelright=True)
+      ax2.tick_params(axis='x',which='both',labelbottom=False,labeltop=False)
+      # ax.xaxis.set_label_position('top')
+      ax2.yaxis.set_label_position('right')
+      ax2.axhline(0, color='0.5', ls=':', zorder=1)
+    ax2.plot(range(1988,2018), fund, c=col[i+1])
+
+    if i==0:
+      ax3.annotate('g)', xy=(0.01, 0.89), xycoords='axes fraction')
+      ax3.set_ylabel('Debt\n(\$M)')
+      ax3.set_xlabel('Year')
+      # ax3.set_xticks(np.arange(0.85, 0.98, 0.04))
+      ax3.tick_params(axis='y',which='both',labelleft=True,labelright=False)
+      ax3.tick_params(axis='x',which='both',labelbottom=True,labeltop=False)
+      # ax3.xaxis.set_label_position('top')
+      # ax3.yaxis.set_label_position('right')
+      ax3.axhline(0, color='0.5', ls=':', zorder=1)
+    ax3.plot(range(1988,2018), debt, c=col[i+1])
+
+    if i==0:
+      ax4.annotate('h)', xy=(0.01, 0.89), xycoords='axes fraction')
+      ax4.set_ylabel('Final Cashflow\n(\$M)', rotation=270, labelpad=35)
+      ax4.set_xlabel('Year')
+      # ax4.set_xticks(np.arange(0.85, 0.98, 0.04))
+      ax4.tick_params(axis='y',which='both',labelleft=False,labelright=True)
+      ax4.tick_params(axis='x',which='both',labelbottom=True,labeltop=False)
+      # ax4.xaxis.set_label_position('top')
+      ax4.yaxis.set_label_position('right')
+      ax4.axhline(0, color='0.5', ls=':', zorder=1)
+    ax4.plot(range(1988,2017), cf4, c=col[i+1])
+
+  ax3.legend([l0, l1, l2, l3],['External Driver','Policy A','Policy B','Policy C'], ncol=4, bbox_to_anchor=(2.11,-0.35), fontsize=12)
+
+  plt.savefig(dir_figs + 'simPlot.jpg', bbox_inches='tight', dpi=1200)
+
+  return
 
 
 
@@ -310,7 +480,7 @@ def plot_distribution_objectives(dir_figs, synthetic_data, moea_solns, cases_sfp
   plt.axvline(x=cases_sfpuc_Jdebt[1], color=col[2], linewidth=2, linestyle='--')
   plt.axvline(x=cases_sfpuc_Jdebt[2], color=col[3], linewidth=2, linestyle='--')
 
-  plt.savefig(dir_figs + 'fig9.png', dpi=1200)
+  plt.savefig(dir_figs + 'fig9.jpg', dpi=1200)
 
   return
 
@@ -362,10 +532,10 @@ def plot_tradeoff_cloud(dir_figs, moea_solns, meanRevenue, p_sfpuc, debt_filter)
   plt.xlabel(r"Normalized Expected Annualized Cash Flow $\left(\hat{J}^{cash}\right)\rightarrow$")
   if (debt_filter):
     plt.legend([m2, m3, m1], ['Fund', 'CFD', 'Fund+CFD'], loc='lower left')
-    plt.savefig(dir_figs + 'fig10.png', bbox_inches='tight', dpi=1200)
+    plt.savefig(dir_figs + 'fig10.jpg', bbox_inches='tight', dpi=1200)
   else:
     plt.legend([m2, m3, m1], ['Fund', 'CFD', 'Fund+CFD'], loc='lower left')
-    plt.savefig(dir_figs + 'figS7.png', bbox_inches='tight', dpi=1200)
+    plt.savefig(dir_figs + 'figS7.jpg', bbox_inches='tight', dpi=1200)
 
   return
 
@@ -551,9 +721,9 @@ def plot_sensitivity_debt(dir_figs, moea_solns, p_sfpuc, debt_filter):
                 c='k', alpha=0.7)
 
   if (debt_filter):
-    plt.savefig(dir_figs + 'fig11.png', bbox_inches='tight', dpi=1200)
+    plt.savefig(dir_figs + 'fig11.jpg', bbox_inches='tight', dpi=1200)
   else:
-    plt.savefig(dir_figs + 'figS8.png', bbox_inches='tight', dpi=1200)
+    plt.savefig(dir_figs + 'figS8.jpg', bbox_inches='tight', dpi=1200)
 
   return
 
@@ -778,9 +948,9 @@ def plot_sensitivity_cashflow(dir_figs, moea_solns, p_sfpuc, meanRevenue, debt_f
            c='k', alpha=0.7)
 
   if (debt_filter):
-    plt.savefig(dir_figs + 'fig12.png', bbox_inches='tight', dpi=1200)
+    plt.savefig(dir_figs + 'fig12.jpg', bbox_inches='tight', dpi=1200)
   else:
-    plt.savefig(dir_figs + 'figS9.png', bbox_inches='tight', dpi=1200)
+    plt.savefig(dir_figs + 'figS9.jpg', bbox_inches='tight', dpi=1200)
 
   return
 
@@ -894,7 +1064,7 @@ def plot_hypervolume(dir_figs, metrics_seedsBase, metrics_seedsSensitivity, p_su
       ax.set_xlabel('Thousands of Function Evaluations')
     if (rj == 2)&(cj == 0):
       ax.set_ylabel('Normalized Hypervolume')
-  plt.savefig(dir_figs + 'figS4.png', bbox_inches='tight', dpi=1200)
+  plt.savefig(dir_figs + 'figS4.jpg', bbox_inches='tight', dpi=1200)
 
   return
 
@@ -950,7 +1120,7 @@ def plot_generational_distance(dir_figs, metrics_seedsBase, metrics_seedsSensiti
       ax.set_xlabel('Thousands of Function Evaluations')
     if (rj == 2)&(cj == 0):
       ax.set_ylabel('Generational Distance')
-  plt.savefig(dir_figs + 'figS5.png', bbox_inches='tight', dpi=1200)
+  plt.savefig(dir_figs + 'figS5.jpg', bbox_inches='tight', dpi=1200)
 
   return
 
@@ -1004,7 +1174,7 @@ def plot_epsilon_indicator(dir_figs, metrics_seedsBase, metrics_seedsSensitivity
       ax.set_xlabel('Thousands of Function Evaluations')
     if (rj == 2)&(cj == 0):
       ax.set_ylabel('Epsilon Indicator')
-  plt.savefig(dir_figs + 'figS6.png', bbox_inches='tight', dpi=1200)
+  plt.savefig(dir_figs + 'figS6.jpg', bbox_inches='tight', dpi=1200)
 
   return
 

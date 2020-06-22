@@ -83,10 +83,10 @@ def simulate_revenue(dir_generated_inputs, gen, hp_GWh, hp_dolPerKwh, genSynth, 
                                 mtidGrowFrac,
                                 hp_dolPerKwh['M'].iloc[hp_dolPerKwh.shape[0] - 1] ,
                                 hp_dolPerKwh['mtid'].iloc[hp_dolPerKwh.shape[0] - 1] )
-
+    powHistSample = powSynth.powPrice.iloc[3600:(3600+len(gen.tot))].reset_index(drop=True)
     # simulated revs for historical generation w/ random synth power price & current fixed muni/mtid rates
     revHist = pd.DataFrame({'rev': revenue_model_milDollars(gen.tot.reset_index(drop=True),
-                                                      powSynth.powPrice.iloc[360:(360+len(gen.tot))].reset_index(drop=True)/1000,
+                                                      powSynth.powPrice.iloc[3600:(3600+len(gen.tot))].reset_index(drop=True)/1000,
                                                       hp_GWh['M'].iloc[hp_GWh.shape[0] - 1] / 12,
                                                       mtidGrowFrac,
                                                       hp_dolPerKwh['M'].iloc[hp_dolPerKwh.shape[0] - 1],
@@ -97,12 +97,15 @@ def simulate_revenue(dir_generated_inputs, gen, hp_GWh, hp_dolPerKwh, genSynth, 
     if (save):
       revSim.to_pickle(dir_generated_inputs + 'revSim.pkl')
       revHist.to_pickle(dir_generated_inputs + 'revHist.pkl')
+      powHistSample.to_pickle(dir_generated_inputs + 'powHistSample.pkl')
+
 
   else:
     revSim = pd.read_pickle(dir_generated_inputs + 'revSim.pkl')
     revHist = pd.read_pickle(dir_generated_inputs + 'revHist.pkl')
+    powHistSample = pd.read_pickle(dir_generated_inputs + 'powHistSample.pkl')
 
-  return (revHist, revSim)
+  return (revHist, powHistSample, revSim)
 
 
 
@@ -163,7 +166,7 @@ def plot_SweFebApr_SweGen_SweRev(dir_figs, swe, gen, revHist, sweSynth, genSynth
   if (histRev):
     ax.scatter(sweWtHist.loc[1988:], revHistWyr, alpha=0.6, color=col[0], marker='^', s=40)
   ax.legend([p1,p2], ['Synthetic', 'Historic'], loc='lower right')
-  plt.savefig(dir_figs + 'fig3.png', bbox_inches='tight', dpi=1200)
+  plt.savefig(dir_figs + 'fig3.jpg', bbox_inches='tight', dpi=1200)
 
 
 
@@ -319,8 +322,7 @@ def plot_contract(dir_figs, sweWtSynth, payoutPutSim, payoutShortCallSim, payout
     line4, = ax.plot([0, kinkX, 60], [kinkX + kinkY + lambda_shifts[0], kinkY + lambda_shifts[0], kinkY + lambda_shifts[0]], color=col[0], ls='--', linewidth=2)
     line5, = ax.plot([0, kinkX, 60], [kinkX + kinkY + lambda_shifts[1], kinkY + lambda_shifts[1], kinkY + lambda_shifts[1]], color=col[0], ls=':', linewidth=2)
     plt.legend([line4,line3,line5],['No loading', 'Baseline loading', 'High loading'],loc='upper right')
-    plot_name = dir_figs + 'fig5.png'
-    print(kinkX, kinkY)
+    plot_name = dir_figs + 'fig5.jpg'
   elif (plot_type=='composite'):
     # plot put
     kinkY = np.min(payoutPutSim)
@@ -333,7 +335,7 @@ def plot_contract(dir_figs, sweWtSynth, payoutPutSim, payoutShortCallSim, payout
     kinkCapX = np.min(sweWtSynth.loc[payoutShortCallSim < kinkCapY + eps])
     line2, = ax.plot([0, kinkStrikeX, kinkCapX, 60], [kinkStrikeY, kinkStrikeY, kinkCapY, kinkCapY], color=col[2], lw=2, ls='--')
     plt.legend([line1,line2,line3],['Long put','Short capped call','Capped contract for differences'],loc='lower left')
-    plot_name = dir_figs + 'figS3.png'
+    plot_name = dir_figs + 'figS3.jpg'
 
   plt.savefig(plot_name, dpi=1200)
 
@@ -432,7 +434,7 @@ def plot_swe_hedged_revenue(dir_figs, sweWtSynth, revSimWyr, payoutCfdSim, meanR
   leg = plt.legend((eb1, eb3), ('Unhedged', 'Hedged'),
                    loc='upper left', borderaxespad=0.)
 
-  plot_name = dir_figs + 'fig7.png'
+  plot_name = dir_figs + 'fig7.jpg'
 
   plt.savefig(plot_name, bbox_extra_artists=([leg]), bbox_inches='tight', dpi=1200)
 
@@ -470,7 +472,7 @@ def plot_cfd_slope_effect(dir_figs, sweWtSynth, revSimWyr, payoutCfdSim, meanRev
   cbar = plt.colorbar(cmapScalar)
   cbar.ax.set_ylabel('Contract slope ($\$$M/inch)')
 
-  plot_name = dir_figs + 'fig6.png'
+  plot_name = dir_figs + 'fig6.jpg'
   plt.savefig(plot_name, dpi=1200)
 
   return

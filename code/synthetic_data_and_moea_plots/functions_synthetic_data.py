@@ -201,7 +201,7 @@ def plot_empirical_synthetic_copula_swe(dir_figs, swe, startTime):
 ############## Returns dataframe monthly gen (GWh/mnth) #########################################
 ##########################################################################
 
-def synthetic_generation(dir_generated_inputs, dir_figs, gen, sweSynth, redo = False, save = False):
+def synthetic_generation(dir_generated_inputs, dir_figs, gen, sweSynth, redo = False, save = False, plot = True):
   np.random.seed(2)
   if (redo):
     # dum = 6
@@ -320,49 +320,49 @@ def synthetic_generation(dir_generated_inputs, dir_figs, gen, sweSynth, redo = F
                                     gen.tot.loc[gen.wmnth == i].mean()).std()]})).reset_index(drop=True)
 
 
-
-    ### plot 12 monthly models with data (Fig S2)
-    max_x = 60
-    wmnths = ['Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep']
-    plt.figure()
-    for i in range(3):
-      for j in range(4):
-        ax = plt.subplot2grid((3, 4), (i,j))
-        if (j != 0):
-          ax.tick_params(axis='y', which='both', labelleft=False)
-        if (i != 2):
-          ax.tick_params(axis='x', which='both', labelbottom=False)
-        if (i == 2) & (j == 1):
-          ax.set_xlabel('                        Predictor SWE (inches)')
-        elif (i == 1) & (j == 0):
-          ax.set_ylabel('Generation (GWh/month)')
-        # ax.xaxis.set_label_position('top')
-        # ax.set_xticks(np.arange(-2, 6, 7))
-        ax.set_xlim([0,max_x])
-        ax.set_ylim([0,280])
-        ax.set_xticks(np.arange(0, 51, 25))
-        ax.set_yticks(np.arange(0, 201, 100))
-        wmnth = 1 + 4*i + j
-        if (wmnth <= 4):
-          swetemp = gen.sweFeb.loc[gen.wmnth == wmnth]
-        else:
-          swetemp = gen.sweApr.loc[gen.wmnth == wmnth]
-        plt.scatter(swetemp, gen.tot.loc[gen.wmnth == wmnth], c=col[3])
-        x0 = 0
-        y0 = lmGenWmnthParams.int.loc[lmGenWmnthParams.wmnth==wmnth].iloc[0]
-        y1 = lmGenWmnthParams.thres.loc[lmGenWmnthParams.wmnth==wmnth].iloc[0]
-        slp = (lmGenWmnthParams.sweAprSlp.loc[lmGenWmnthParams.wmnth==wmnth].iloc[0] +
-                               lmGenWmnthParams.sweFebSlp.loc[lmGenWmnthParams.wmnth==wmnth].iloc[0])
-        x1 = (y1 - y0) / slp
-        if (slp == 0):
-          plt.axhline(y0, c=col[0])
-        else:
-          plt.plot([x0, x1], [y0, y1], c=col[0])
-        if (x1 < max_x):
-          plt.plot([x1, max_x], [y1, y1], c=col[0])
-        plt.annotate(wmnths[wmnth-1], xy=(38,3))
-    plot_name = dir_figs + 'figS2.jpg'
-    plt.savefig(plot_name, dpi=1200)
+    if (plot):
+      ### plot 12 monthly models with data (Fig S2)
+      max_x = 60
+      wmnths = ['Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep']
+      plt.figure()
+      for i in range(3):
+        for j in range(4):
+          ax = plt.subplot2grid((3, 4), (i,j))
+          if (j != 0):
+            ax.tick_params(axis='y', which='both', labelleft=False)
+          if (i != 2):
+            ax.tick_params(axis='x', which='both', labelbottom=False)
+          if (i == 2) & (j == 1):
+            ax.set_xlabel('                        Predictor SWE (inches)')
+          elif (i == 1) & (j == 0):
+            ax.set_ylabel('Generation (GWh/month)')
+          # ax.xaxis.set_label_position('top')
+          # ax.set_xticks(np.arange(-2, 6, 7))
+          ax.set_xlim([0,max_x])
+          ax.set_ylim([0,280])
+          ax.set_xticks(np.arange(0, 51, 25))
+          ax.set_yticks(np.arange(0, 201, 100))
+          wmnth = 1 + 4*i + j
+          if (wmnth <= 4):
+            swetemp = gen.sweFeb.loc[gen.wmnth == wmnth]
+          else:
+            swetemp = gen.sweApr.loc[gen.wmnth == wmnth]
+          plt.scatter(swetemp, gen.tot.loc[gen.wmnth == wmnth], c=col[3])
+          x0 = 0
+          y0 = lmGenWmnthParams.int.loc[lmGenWmnthParams.wmnth==wmnth].iloc[0]
+          y1 = lmGenWmnthParams.thres.loc[lmGenWmnthParams.wmnth==wmnth].iloc[0]
+          slp = (lmGenWmnthParams.sweAprSlp.loc[lmGenWmnthParams.wmnth==wmnth].iloc[0] +
+                                lmGenWmnthParams.sweFebSlp.loc[lmGenWmnthParams.wmnth==wmnth].iloc[0])
+          x1 = (y1 - y0) / slp
+          if (slp == 0):
+            plt.axhline(y0, c=col[0])
+          else:
+            plt.plot([x0, x1], [y0, y1], c=col[0])
+          if (x1 < max_x):
+            plt.plot([x1, max_x], [y1, y1], c=col[0])
+          plt.annotate(wmnths[wmnth-1], xy=(38,3))
+      plot_name = dir_figs + 'figS2.jpg'
+      plt.savefig(plot_name, dpi=1200)
 
 
     gen['genResidS'] = gen.tot - gen.genPredS
@@ -670,7 +670,7 @@ def synthetic_power(dir_generated_inputs, power, redo = False, save = False):
     #       continue
     sarimaxPower = SARIMAX(power.logDe, order=(1, 0, 0), seasonal_order=(0, 0, 1, 12))
     sarimaxPower = sarimaxPower.fit(disp=0)
-    print(sarimaxPower.summary())
+    # print(sarimaxPower.summary())
 
 
 
