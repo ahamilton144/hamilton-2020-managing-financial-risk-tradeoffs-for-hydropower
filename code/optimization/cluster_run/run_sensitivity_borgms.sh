@@ -7,9 +7,9 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --export=ALL
 #SBATCH --exclusive
-#SBATCH -t 10:00:00
+#SBATCH -t 15:00:00
 
-NFE=10000
+NFE=15000
 seed_sample=1
 
 time {

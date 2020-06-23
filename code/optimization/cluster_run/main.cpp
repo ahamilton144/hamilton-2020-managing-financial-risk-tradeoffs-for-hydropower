@@ -45,19 +45,19 @@
 #include <boost/accumulators/statistics/moment.hpp>
 #include <boost/accumulators/statistics/tail_quantile.hpp>
 #include "./../../misc/boostutil.h"
-#include "./../../misc/borg/borg.h"
-// #include "./../../misc/borg/borgms.h"
+////////#include "./../../misc/borg/borg.h"
+#include "./../../misc/borg/borgms.h"
 #include "./../../misc/borg/moeaframework.h"
 
 #define NUM_YEARS 20                   //20yr sims
-#define NUM_SAMPLES 10000
+#define NUM_SAMPLES 50000
 #define NUM_LINES_STOCHASTIC_INPUT 999999    //Input file samp.txt has 1M rows
 #define NUM_VARIABLES_STOCHASTIC_INPUT 5            //3 cols in input: sweFeb, sweApr,revenue,cfdFeb,cfdApr
 #define INDEX_STOCHASTIC_REVENUE 2   
 #define INDEX_STOCHASTIC_CFD_FEB 3    
 #define INDEX_STOCHASTIC_CFD_APR 4    
 #define MEAN_REVENUE 127.80086602479503     // mean revenue in absense of any financial risk mgmt. Make sure this is consistent with current input synthetic_data.txt revenue column.
-#define MIN_SLOPE_CFD 0.05          // if contract slope dv < $0.05M/inch, act as if 0.
+#define MIN_SLOPE_CFD 0.005          // if contract slope dv < $0.05M/inch, act as if 0.
 #define MIN_MAX_FUND 0.05               // if max fund dv < $0.05M, act as if 0.
 #define NORMALIZE_SLOPE_CFD 4.0
 #define NORMALIZE_FUND 250.0
@@ -71,7 +71,7 @@
 #define NUM_DV  3
 #define NUM_PARAM 7         // cost_fraction, discount_rate, delta_interest_fund, delta_interest_debt, lambda, lambda_prem_shift_feb, lambda_prem_shift_apr
 #define NUM_PARAM_SAMPLES 151  // number of LHC samples of financial parameters in LHC file, including baseline. 
-#define BORG_RUN_TYPE 1		// 0: single run no borg; 1: borg run, serial; 2: borg parallel for cluster;
+#define BORG_RUN_TYPE 2		// 0: single run no borg; 1: borg run, serial; 2: borg parallel for cluster;
 #define SENSITIVITY_ANALYSIS 0	// 0 for baseline financial params (SFPUC October 2016 estimate), 1 for sensitivity analysis
 
 namespace ublas = boost::numeric::ublas;
@@ -394,6 +394,7 @@ int main(int argc, char* argv[]) {
         // decision variables
         problem_dv[0] = pareto[0][i];
         problem_dv[1] = pareto[1][i];
+        problem_dv[2] = pareto[2][i];
 
         // params from LHC sample
         cost_fraction = param_LHC_sample[0][LHC_set];             // fraction of MEAN_REVENUE that is must-meet costs
@@ -450,7 +451,7 @@ int main(int argc, char* argv[]) {
 
 //        printf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", cost_fraction, delta, Delta_interest_fund, Delta_interest_debt, discount_rate, interest_fund, interest_debt, lambda_prem_shift);
 
-#if (BORG_RUN_TYPE == 1) | (BORG_RUN_TYPE == 2)
+#if BORG_RUN_TYPE > 0
         // Define the problem with decisions, objectives, constraints and the evaluation function
         BORG_Problem problem = BORG_Problem_create(NUM_DV, NUM_OBJECTIVES, NUM_CONSTRAINTS, portfolioProblem);
 
@@ -523,7 +524,7 @@ int main(int argc, char* argv[]) {
 
         clock_t end = clock();
         double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC / 60.0;
-       printf("Finished: %d\t%f\n", p, elapsed_secs);
+        // printf("Finished: %d\t%f\n", p, elapsed_secs);
     }
 #endif
 

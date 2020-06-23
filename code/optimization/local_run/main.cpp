@@ -50,14 +50,14 @@
 #include "./../../misc/borg/moeaframework.h"
 
 #define NUM_YEARS 20                   //20yr sims
-#define NUM_SAMPLES 10000
+#define NUM_SAMPLES 5000
 #define NUM_LINES_STOCHASTIC_INPUT 999999    //Input file samp.txt has 1M rows
 #define NUM_VARIABLES_STOCHASTIC_INPUT 5            //3 cols in input: sweFeb, sweApr,revenue,cfdFeb,cfdApr
 #define INDEX_STOCHASTIC_REVENUE 2   
 #define INDEX_STOCHASTIC_CFD_FEB 3    
 #define INDEX_STOCHASTIC_CFD_APR 4    
 #define MEAN_REVENUE 127.80086602479503     // mean revenue in absense of any financial risk mgmt. Make sure this is consistent with current input synthetic_data.txt revenue column.
-#define MIN_SLOPE_CFD 0.05          // if contract slope dv < $0.05M/inch, act as if 0.
+#define MIN_SLOPE_CFD 0.005          // if contract slope dv < $0.05M/inch, act as if 0.
 #define MIN_MAX_FUND 0.05               // if max fund dv < $0.05M, act as if 0.
 #define NORMALIZE_SLOPE_CFD 4.0
 #define NORMALIZE_FUND 250.0
@@ -394,6 +394,7 @@ int main(int argc, char* argv[]) {
         // decision variables
         problem_dv[0] = pareto[0][i];
         problem_dv[1] = pareto[1][i];
+        problem_dv[2] = pareto[2][i];
 
         // params from LHC sample
         cost_fraction = param_LHC_sample[0][LHC_set];             // fraction of MEAN_REVENUE that is must-meet costs
