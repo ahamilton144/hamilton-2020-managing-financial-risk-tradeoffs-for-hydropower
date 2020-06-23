@@ -50,14 +50,14 @@
 #include "./../../misc/borg/moeaframework.h"
 
 #define NUM_YEARS 20                   //20yr sims
-#define NUM_SAMPLES 10000
+#define NUM_SAMPLES 50000
 #define NUM_LINES_STOCHASTIC_INPUT 999999    //Input file samp.txt has 1M rows
-#define NUM_VARIABLES_STOCHASTIC_INPUT 5            //3 cols in input: sweFeb, sweApr,revenue,cfdFeb,cfdApr
+#define NUM_VARIABLES_STOCHASTIC_INPUT 3            //3 cols in input: sweFeb, sweApr,revenue
 #define INDEX_STOCHASTIC_REVENUE 2   
-#define INDEX_STOCHASTIC_CFD_FEB 3    
-#define INDEX_STOCHASTIC_CFD_APR 4    
+#define INDEX_STOCHASTIC_SNOW_FEB 0    
+#define INDEX_STOCHASTIC_SNOW_APR 1    
 #define MEAN_REVENUE 127.80086602479503     // mean revenue in absense of any financial risk mgmt. Make sure this is consistent with current input synthetic_data.txt revenue column.
-#define MIN_SLOPE_CFD 0.05          // if contract slope dv < $0.05M/inch, act as if 0.
+#define MIN_SLOPE_CFD 0.005          // if contract slope dv < $0.05M/inch, act as if 0.
 #define MIN_MAX_FUND 0.05               // if max fund dv < $0.05M, act as if 0.
 #define NORMALIZE_SLOPE_CFD 4.0
 #define NORMALIZE_FUND 250.0
@@ -69,7 +69,8 @@
 #define NUM_CONSTRAINTS 1
 #define EPS_CONS1 0.05
 #define NUM_DV  3
-#define NUM_PARAM 7         // cost_fraction, discount_rate, delta_interest_fund, delta_interest_debt, lambda, lambda_prem_shift_feb, lambda_prem_shift_apr
+#define NUM_PARAM 11         // cost_fraction, discount_rate, delta_interest_fund, delta_interest_debt, lambda, lam_capX_2, lam_capX_1, lam_capX_0, lam_capY_2, lam_capY_1, lam_capY_0
+#define NUM_PARAM_CFD 6     // lam_capX_2, lam_capX_1, lam_capX_0, lam_capY_2, lam_capY_1, lam_capY_0
 #define NUM_PARAM_SAMPLES 151  // number of LHC samples of financial parameters in LHC file, including baseline. 
 #define BORG_RUN_TYPE 1		// 0: single run no borg; 1: borg run, serial; 2: borg parallel for cluster;
 #define SENSITIVITY_ANALYSIS 0	// 0 for baseline financial params (SFPUC October 2016 estimate), 1 for sensitivity analysis
@@ -79,6 +80,7 @@ namespace tools = boost::math::tools;
 namespace accumulator = boost::accumulators;
 using namespace std;
 
+double cfdUnitPayout(const double f_cfd_capX, const double f_cfd_capY, const double f_swe);
 double policyCashflowPostWithdrawal(const double f_fund_balance, const double f_power_price_index, const double f_cash_in);
 
 double stochastic_input[NUM_LINES_STOCHASTIC_INPUT][NUM_VARIABLES_STOCHASTIC_INPUT];                   // Stochastic variables
@@ -96,8 +98,7 @@ ublas::vector<double> annualized_cashflow(NUM_SAMPLES);     // annualized cash f
 ublas::vector<double> debt_steal(NUM_SAMPLES);                      // no-steal constraint on debt
 
 ublas::vector<double> revenue(NUM_YEARS);                          // state variables
-ublas::vector<double> unit_payout_cfd_feb(NUM_YEARS);      // unit payout (assuming slope $1M/inch) for capped contract for differences (cfd)
-ublas::vector<double> unit_payout_cfd_apr(NUM_YEARS);      // unit payout (assuming slope $1M/inch) for capped contract for differences (cfd)
+ublas::vector<double> unit_payout_cfd(NUM_YEARS);      // unit payout (assuming slope $1M/inch) for capped contract for differences (cfd)
 ublas::vector<double> discount_factor(NUM_YEARS);
 
 ublas::vector<double> cashflow(NUM_YEARS);                     // decisions
@@ -110,8 +111,7 @@ double mean_net_revenue;
 double discount_rate;
 double interest_fund;
 double interest_debt;
-double lambda_prem_shift_feb;
-double lambda_prem_shift_apr;
+double cfd_params[NUM_PARAM_CFD];   // params for pricing cfd based on snow_wt_feb
 int LHC_set;
 int NFE;
 int NFE_counter = 0;
@@ -130,8 +130,7 @@ void portfolioProblem(double *problem_dv, double *problem_objs, double *problem_
     zero(debt_steal);
     zero(revenue);
     zero(discount_factor);
-    zero(unit_payout_cfd_feb);
-    zero(unit_payout_cfd_apr);
+    zero(unit_payout_cfd);
 
 //    printf("%d\n", NFE_counter);
     NFE_counter += 1;
@@ -140,16 +139,14 @@ void portfolioProblem(double *problem_dv, double *problem_objs, double *problem_
     if (max_fund < MIN_MAX_FUND){
         max_fund = 0.0;
     }
-    double slope_cfd_feb = problem_dv[1];
-    if (slope_cfd_feb < MIN_SLOPE_CFD){
-        slope_cfd_feb = 0.0;
+    double slope_cfd = problem_dv[1];
+    if (slope_cfd < MIN_SLOPE_CFD){
+        slope_cfd = 0.0;
     }
-    double slope_cfd_apr = problem_dv[2];
-    if (slope_cfd_apr < MIN_SLOPE_CFD){
-        slope_cfd_apr = 0.0;
-    }
-    double total_payout_cfd;
+    double snow_wt_feb = problem_dv[2];
 
+    double total_payout_cfd;
+    double snow_feb, snow_apr, snow_index;
     double discount_normalization;      // discounting normalization, 1/sum_(discount_factor)
     double cash_in;
     accumulator_t debt_q95(accumulator::tag::tail<accumulator::right>::cache_size = NUM_SAMPLES);    // accumulator object for calculating upper 95th quantile of debt
@@ -160,6 +157,11 @@ void portfolioProblem(double *problem_dv, double *problem_objs, double *problem_
         discount_normalization += discount_factor(i);
     }
     discount_normalization = 1.0 / discount_normalization;
+
+    // get cfd params based on snow_wt_feb & lambda
+    double cfd_capX = (cfd_params[0] * snow_wt_feb * snow_wt_feb) + (cfd_params[1] * snow_wt_feb) + cfd_params[2];
+    double cfd_capY = (cfd_params[3] * snow_wt_feb * snow_wt_feb) + (cfd_params[4] * snow_wt_feb) + cfd_params[5];
+
 
     // run revenue model simulation
     for (int s = 0; s < NUM_SAMPLES; s++) {
@@ -172,8 +174,10 @@ void portfolioProblem(double *problem_dv, double *problem_objs, double *problem_
         // for each sample, get 20 years from SOW file
         for (int i = 0; i < NUM_YEARS; i++) {
             revenue(i) = (stochastic_input[index + i][INDEX_STOCHASTIC_REVENUE] - MEAN_REVENUE * cost_fraction);
-            unit_payout_cfd_feb(i) = stochastic_input[index + i][INDEX_STOCHASTIC_CFD_FEB];
-            unit_payout_cfd_apr(i) = stochastic_input[index + i][INDEX_STOCHASTIC_CFD_APR];
+            snow_feb = stochastic_input[index + i][INDEX_STOCHASTIC_SNOW_FEB];
+            snow_apr = stochastic_input[index + i][INDEX_STOCHASTIC_SNOW_APR];
+            snow_index = snow_feb * snow_wt_feb + snow_apr * (1. - snow_wt_feb);
+            unit_payout_cfd(i) = cfdUnitPayout(cfd_capX, cfd_capY, snow_index);
 //            printf("%f  %f \n", revenue(i), unit_payout_cfd_feb(i));
         }
 
@@ -186,7 +190,7 @@ void portfolioProblem(double *problem_dv, double *problem_objs, double *problem_
         //calculate new revenues, reserve fund balance, objectives
         for (int i = 0; i < NUM_YEARS; i++) {
 
-            total_payout_cfd = slope_cfd_feb * (unit_payout_cfd_feb(i) - lambda_prem_shift_feb) + slope_cfd_apr * (unit_payout_cfd_apr(i) - lambda_prem_shift_apr);
+            total_payout_cfd = slope_cfd * unit_payout_cfd(i);
             cash_in = revenue(i) + total_payout_cfd - debt(i) * interest_debt;
 
             cashflow(i) = policyCashflowPostWithdrawal(fund_balance(i) * interest_fund, cash_in, max_fund);
@@ -201,8 +205,7 @@ void portfolioProblem(double *problem_dv, double *problem_objs, double *problem_
 
             annualized_cashflow(s) += cashflow(i) * discount_factor(i);
 //            printf("%d %f %f %f %f\n", i, revenue(i), total_payout_cfd, cashflow(i), debt(i));
-//            printf("%f  %f  %f  %f  %f  %f  %f  %f  %f  %f\n", revenue(i), unit_payout_cfd_feb(i), slope_cfd, snow_put_strike, total_payout_cfd,
-//                   cash_in, cashflow(i), fund_withdrawal(i), debt(i+1), fund_balance(i+1));
+
 
         }
         annualized_cashflow(s) = discount_normalization *
@@ -234,6 +237,15 @@ void portfolioProblem(double *problem_dv, double *problem_objs, double *problem_
 
 }
 
+
+// calculate unitcfd payout based on 
+double cfdUnitPayout(const double f_cfd_capX, const double f_cfd_capY, const double f_swe){
+    if (f_swe >= f_cfd_capX){
+        return f_cfd_capY;
+    }else{
+        return f_cfd_capY + (f_cfd_capX - f_swe);
+    }
+}
 
 // calculate cash flow after withdrawal, using fund balance and cash in as inputs, and constrained by max_fund.
 double policyCashflowPostWithdrawal(const double f_fund_balance, const double f_cash_in, const double f_max_fund) {
@@ -301,7 +313,7 @@ int main(int argc, char* argv[]) {
 
     // read in LHC dv
     FILE *myfile2;
-    myfile2 = fopen("./../../../data/generated_inputs/param_LHC_sample_withLamPremShift.txt", "r");
+    myfile2 = fopen("./../../../data/generated_inputs/param_LHC_sample_withLamPricing.txt", "r");
     char testbuffer2[BUFFER_MAX_SIZE];
     linenum = 0;
 
@@ -394,15 +406,16 @@ int main(int argc, char* argv[]) {
         // decision variables
         problem_dv[0] = pareto[0][i];
         problem_dv[1] = pareto[1][i];
+        problem_dv[2] = pareto[2][i];
 
         // params from LHC sample
         cost_fraction = param_LHC_sample[0][LHC_set];             // fraction of MEAN_REVENUE that is must-meet costs
         double delta = param_LHC_sample[1][LHC_set];              // discount rate, as %/yr
         double Delta_interest_fund = param_LHC_sample[2][LHC_set];    // interest rate on reserve funds, as %/yr, markdown below delta (all negative)
         double Delta_interest_debt = param_LHC_sample[3][LHC_set];    // interest rate charged on debt, as %/yr, markup above delta (all positive)
-        lambda_prem_shift_feb = param_LHC_sample[5][LHC_set];         // shift in cfd premium to apply, based on lambda parameter (relative to based premiums from lambda=0.25)
-        lambda_prem_shift_apr = param_LHC_sample[6][LHC_set];         // shift in cfd premium to apply, based on lambda parameter (relative to based premiums from lambda=0.25)
-
+        for (int i = 0; i < NUM_PARAM_CFD; ++i){
+            cfd_params[i] = param_LHC_sample[(NUM_PARAM - NUM_PARAM_CFD) + i][p];   // params used to calculate cfd payout params based on snow_wt_feb
+        }
 
         // calculated params for LHC sensitivity analysis, used in portfolioProblem
         mean_net_revenue = MEAN_REVENUE * (1. - cost_fraction);
@@ -437,9 +450,9 @@ int main(int argc, char* argv[]) {
         double delta = param_LHC_sample[1][p];              // discount rate, as %/yr
         double Delta_interest_fund = param_LHC_sample[2][p];    // interest rate on reserve funds, as %/yr, markdown below delta (all negative)
         double Delta_interest_debt = param_LHC_sample[3][p];    // interest rate charged on debt, as %/yr, markup above delta (all positive)
-        lambda_prem_shift_feb = param_LHC_sample[5][p];         // shift in cfd premium to apply, based on lambda parameter (relative to based premiums from lambda=0.25)
-        lambda_prem_shift_apr = param_LHC_sample[6][p];         // shift in cfd premium to apply, based on lambda parameter (relative to based premiums from lambda=0.25)
-
+        for (int i = 0; i < NUM_PARAM_CFD; ++i){
+            cfd_params[i] = param_LHC_sample[(NUM_PARAM - NUM_PARAM_CFD) + i][p];   // params used to calculate cfd payout params based on snow_wt_feb
+        }
 
         // calculated params for LHC sensitivity analysis, used in portfolioProblem
         mean_net_revenue = MEAN_REVENUE * (1. - cost_fraction);
@@ -450,14 +463,14 @@ int main(int argc, char* argv[]) {
 
 //        printf("%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\n", cost_fraction, delta, Delta_interest_fund, Delta_interest_debt, discount_rate, interest_fund, interest_debt, lambda_prem_shift);
 
-#if (BORG_RUN_TYPE == 1) | (BORG_RUN_TYPE == 2)
+#if BORG_RUN_TYPE > 0
         // Define the problem with decisions, objectives, constraints and the evaluation function
         BORG_Problem problem = BORG_Problem_create(NUM_DV, NUM_OBJECTIVES, NUM_CONSTRAINTS, portfolioProblem);
 
         // Set all the parameter bounds and epsilons
         BORG_Problem_set_bounds(problem, 0, 0, NORMALIZE_FUND);            //bounds for reserve max size
-        BORG_Problem_set_bounds(problem, 1, 0, NORMALIZE_SLOPE_CFD);            //bounds for index contract slope - feb
-        BORG_Problem_set_bounds(problem, 2, 0, NORMALIZE_SLOPE_CFD);            //bounds for index contract slope - apr
+        BORG_Problem_set_bounds(problem, 1, 0, NORMALIZE_SLOPE_CFD);            //bounds for index contract slope 
+        BORG_Problem_set_bounds(problem, 2, 0, 1);            //bounds for snow_wt_feb
 
         BORG_Problem_set_epsilon(problem, 0, EPS_OBJ1); // avg_annualized_cashflow (units $M, so 0.01=$10,000)
         BORG_Problem_set_epsilon(problem, 1, EPS_OBJ2); // q95_max_debt (units $M, so 0.01=$10,000)
@@ -523,7 +536,7 @@ int main(int argc, char* argv[]) {
 
         clock_t end = clock();
         double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC / 60.0;
-       printf("Finished: %d\t%f\n", p, elapsed_secs);
+        // printf("Finished: %d\t%f\n", p, elapsed_secs);
     }
 #endif
 
