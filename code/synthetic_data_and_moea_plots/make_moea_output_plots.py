@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
-import seaborn as sbn
+import seaborn as sns
 import importlib
 from datetime import datetime
 import warnings
@@ -18,8 +18,8 @@ import functions_moea_output_plots
 
 
 
-sbn.set_style('white')
-sbn.set_context('paper', font_scale=1.55)
+sns.set_style('white')
+sns.set_context('paper', font_scale=1.55)
 
 eps = 1e-13
 startTime = datetime.now()
