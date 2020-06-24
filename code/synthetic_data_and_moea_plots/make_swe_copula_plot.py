@@ -3,7 +3,7 @@
 ### Project started May 2017, last update Jan 2020
 ##############################################################################################################
 
-import seaborn as sbn
+import seaborn as sns
 import importlib
 from datetime import datetime
 
@@ -13,8 +13,8 @@ import functions_clean_data
 import functions_synthetic_data
 import functions_revenues_contracts
 
-sbn.set_style('white')
-sbn.set_context('paper', font_scale=1.55)
+sns.set_style('white')
+sns.set_context('paper', font_scale=1.55)
 
 eps = 1e-13
 startTime = datetime.now()

@@ -12,7 +12,7 @@ from matplotlib.pyplot import cm
 import statsmodels.formula.api as sm
 from statsmodels.stats.diagnostic import acorr_ljungbox
 from statsmodels.tsa.statespace.sarimax import SARIMAX
-import seaborn as sbn
+import seaborn as sns
 import scipy as sp
 from scipy import stats as st
 from scipy.stats import gamma, lognorm, multivariate_normal, norm, t
@@ -20,8 +20,8 @@ from datetime import datetime
 import sys
 import itertools
 
-sbn.set_style('white')
-sbn.set_context('paper', font_scale=1.55)
+sns.set_style('white')
+sns.set_context('paper', font_scale=1.55)
 
 cmap = cm.get_cmap('viridis')
 col = [cmap(0.1),cmap(0.3),cmap(0.6),cmap(0.8)]

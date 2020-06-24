@@ -9,13 +9,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
 import statsmodels.formula.api as sm
-import seaborn as sbn
+import seaborn as sns
 from scipy import stats as st
 from scipy.optimize import minimize
 
 
-sbn.set_style('white')
-sbn.set_context('paper', font_scale=1.55)
+sns.set_style('white')
+sns.set_context('paper', font_scale=1.55)
 
 cmap = cm.get_cmap('viridis')
 col = [cmap(0.1),cmap(0.3),cmap(0.6),cmap(0.8)]
@@ -109,7 +109,6 @@ def simulate_revenue(dir_generated_inputs, gen, hp_GWh, hp_dolPerKwh, genSynth, 
 
 
 
-
 ##########################################################################
 ######### plot synthetic feb 1 vs apr 1 swe, sweWt vs gen, sweWt vs revenue (fig 3)###########
 ############## Returns figure #########################################
@@ -134,39 +133,104 @@ def plot_SweFebApr_SweGen_SweRev(dir_figs, swe, gen, revHist, sweSynth, genSynth
   genSynthWyr['sweWt'] = (sweWtParams[0] * genSynthWyr['sweFeb'] + sweWtParams[1] * genSynthWyr['sweApr'])
   genWyr['sweWt'] = (sweWtParams[0] * genWyr['sweFeb'] + sweWtParams[1] * genWyr['sweApr'])
 
-  plt.figure()
-  ax = plt.subplot2grid((2, 3), (0, 0))
+  fig = plt.figure(figsize=(8.5,3))
+  gs1 = fig.add_gridspec(nrows=1, ncols=3, left=0, right=1, wspace=0.6, hspace=0.)
+
+  ax = fig.add_subplot(gs1[0,0])
+  ax.annotate('a)', xy=(0.01, 0.89), xycoords='axes fraction')
   ax.set_xlabel('Feb 1 SWE (inch)')
   ax.set_ylabel('Apr 1 SWE (inch)')
-  ax.xaxis.set_label_position('top')
+#     ax.xaxis.set_label_position('top')
   ax.set_xticks(np.arange(0,76,25))
   ax.set_yticks(np.arange(0,76,25))
-  ax.tick_params(axis='x', which='both', labelbottom=False, labeltop=True)
+#     ax.tick_params(axis='x', which='both', labelbottom=False, labeltop=True)
   ax.scatter(sweSynth.danFeb.iloc[:500], sweSynth.danApr.iloc[:500], marker='o', facecolors='none',
-              linewidth=1, alpha=0.7, edgecolors=col[3], s=30)
+            linewidth=1, alpha=0.7, edgecolors=col[3], s=30)
   ax.scatter(swe.danFeb, swe.danApr, color=col[0], alpha=0.6, marker='^', s=40)
 
-  ax = plt.subplot2grid((2, 3), (1, 0))
-  ax.set_xlabel('SWE Index (inch)')
-  ax.set_ylabel('Generation (TWh/yr)')
-  ax.set_xticks(np.arange(0,76,25))
-  p1 = ax.scatter(sweWtSynth.iloc[:500], genSynthWyr.gen.iloc[:500]/1000, marker='o', facecolors='none',
-              linewidth=1, alpha=0.7, edgecolors=col[3], s=30)
-  p2 = ax.scatter(sweWtHist.loc[1988:], genWyr.tot/1000, color=col[0], alpha=0.6, marker='^', s=40)
+  ax0 = fig.add_subplot(gs1[0,1], sharex=ax)
+  ax0.annotate('b)', xy=(0.01, 0.89), xycoords='axes fraction')
+  ax0.set_xlabel('SWE Index (inch)')
+  ax0.set_ylabel('Generation (TWh/yr)')
+  ax0.set_xticks(np.arange(0,76,25))
+  p1 = ax0.scatter(sweWtSynth.iloc[:500], genSynthWyr.gen.iloc[:500]/1000, marker='o', facecolors='none',
+                    linewidth=1, alpha=0.7, edgecolors=col[3], s=30)
+  p2 = ax0.scatter(sweWtHist.loc[1988:], genWyr.tot/1000, color=col[0], alpha=0.6, marker='^', s=40)
 
-  ax = plt.subplot2grid((2, 3), (0, 1), rowspan=2, colspan=2)
-  ax.set_xlabel('SWE Index (inch)')
-  ax.set_ylabel('Net Revenue ($M/year)')
-  ax.yaxis.set_label_position('right')
-  ax.set_xticks(np.arange(0,76,25))
-  ax.tick_params(axis='y', which='both', labelleft=False, labelright=True)
-  plt.axhline(0,ls=':',c='lightgrey')
-  ax.scatter(sweWtSynth.iloc[:500], revSimWyr.iloc[:500], marker='o', facecolors='none',
+  ax1 = fig.add_subplot(gs1[0,2], sharex=ax)
+  ax1.annotate('c)', xy=(0.01, 0.89), xycoords='axes fraction')
+  ax1.set_xlabel('SWE Index (inch)')
+  ax1.set_ylabel('Net Revenue ($M/year)')
+#     ax1.yaxis.set_label_position('right')
+  ax1.set_xticks(np.arange(0,76,25))
+#     ax1.tick_params(axis='y', which='both', labelleft=False, labelright=True)
+  ax1.axhline(0,ls=':',c='grey')
+  ax1.scatter(sweWtSynth.iloc[:500], revSimWyr.iloc[:500], marker='o', facecolors='none',
               linewidth=1, alpha=0.7, edgecolors=col[3], s=30)
-  if (histRev):
-    ax.scatter(sweWtHist.loc[1988:], revHistWyr, alpha=0.6, color=col[0], marker='^', s=40)
-  ax.legend([p1,p2], ['Synthetic', 'Historic'], loc='lower right')
+  ax1.scatter(sweWtHist.loc[1988:], revHistWyr, alpha=0.6, color=col[0], marker='^', s=40)
+
+  ax0.legend([p1,p2],['Historic','Synthetic'], ncol=2, bbox_to_anchor=(1.27,-0.3))
   plt.savefig(dir_figs + 'fig3.jpg', bbox_inches='tight', dpi=1200)
+
+
+
+# ##########################################################################
+# ######### plot synthetic feb 1 vs apr 1 swe, sweWt vs gen, sweWt vs revenue (fig 3)###########
+# ############## Returns figure #########################################
+# ##########################################################################
+
+# def plot_SweFebApr_SweGen_SweRev(dir_figs, swe, gen, revHist, sweSynth, genSynth, revSim, sweWtParams,
+#                                 MEAN_REVENUE, COST_FRACTION, histRev):
+#   nYr = int(len(revSim) / 12)
+#   yrSim = np.full((1, nYr * 12), 0)
+#   for i in range(1, nYr):
+#     yrSim[0, (12 * i):(12 * (i + 1))] = i
+#   revSimWyr = revSim.groupby(yrSim[0, :(nYr * 12)]).sum()
+#   revHistWyr = revHist.groupby('wyear').rev.sum()
+#   revSimWyr = revSimWyr - MEAN_REVENUE*COST_FRACTION
+#   revHistWyr = revHistWyr - MEAN_REVENUE*COST_FRACTION
+
+#   genSynthWyr = genSynth.groupby('wyr').sum()
+#   genWyr = gen.groupby('wyear').sum()
+
+#   sweWtSynth = (sweWtParams[0] * sweSynth.danFeb + sweWtParams[1] * sweSynth.danApr)
+#   sweWtHist = (sweWtParams[0] * swe.danFeb + sweWtParams[1] * swe.danApr)
+#   genSynthWyr['sweWt'] = (sweWtParams[0] * genSynthWyr['sweFeb'] + sweWtParams[1] * genSynthWyr['sweApr'])
+#   genWyr['sweWt'] = (sweWtParams[0] * genWyr['sweFeb'] + sweWtParams[1] * genWyr['sweApr'])
+
+#   plt.figure()
+#   ax = plt.subplot2grid((2, 3), (0, 0))
+#   ax.set_xlabel('Feb 1 SWE (inch)')
+#   ax.set_ylabel('Apr 1 SWE (inch)')
+#   ax.xaxis.set_label_position('top')
+#   ax.set_xticks(np.arange(0,76,25))
+#   ax.set_yticks(np.arange(0,76,25))
+#   ax.tick_params(axis='x', which='both', labelbottom=False, labeltop=True)
+#   ax.scatter(sweSynth.danFeb.iloc[:500], sweSynth.danApr.iloc[:500], marker='o', facecolors='none',
+#               linewidth=1, alpha=0.7, edgecolors=col[3], s=30)
+#   ax.scatter(swe.danFeb, swe.danApr, color=col[0], alpha=0.6, marker='^', s=40)
+
+#   ax = plt.subplot2grid((2, 3), (1, 0))
+#   ax.set_xlabel('SWE Index (inch)')
+#   ax.set_ylabel('Generation (TWh/yr)')
+#   ax.set_xticks(np.arange(0,76,25))
+#   p1 = ax.scatter(sweWtSynth.iloc[:500], genSynthWyr.gen.iloc[:500]/1000, marker='o', facecolors='none',
+#               linewidth=1, alpha=0.7, edgecolors=col[3], s=30)
+#   p2 = ax.scatter(sweWtHist.loc[1988:], genWyr.tot/1000, color=col[0], alpha=0.6, marker='^', s=40)
+
+#   ax = plt.subplot2grid((2, 3), (0, 1), rowspan=2, colspan=2)
+#   ax.set_xlabel('SWE Index (inch)')
+#   ax.set_ylabel('Net Revenue ($M/year)')
+#   ax.yaxis.set_label_position('right')
+#   ax.set_xticks(np.arange(0,76,25))
+#   ax.tick_params(axis='y', which='both', labelleft=False, labelright=True)
+#   plt.axhline(0,ls=':',c='lightgrey')
+#   ax.scatter(sweWtSynth.iloc[:500], revSimWyr.iloc[:500], marker='o', facecolors='none',
+#               linewidth=1, alpha=0.7, edgecolors=col[3], s=30)
+#   if (histRev):
+#     ax.scatter(sweWtHist.loc[1988:], revHistWyr, alpha=0.6, color=col[0], marker='^', s=40)
+#   ax.legend([p1,p2], ['Synthetic', 'Historic'], loc='lower right')
+#   plt.savefig(dir_figs + 'fig3.jpg', bbox_inches='tight', dpi=1200)
 
 
 
@@ -256,6 +320,55 @@ def snow_contract_payout(dir_generated_inputs, sweWtSynth, contractType = 'put',
 
 
 ##########################################################################
+######### params used for determining payout: capX (swe value of cap on payments), capY (monetary value at that cap) ###########
+############## Returns tuple with params #########################################
+##########################################################################
+
+def snow_contract_params(dir_generated_inputs, sweWtSynth, contractType = 'put', label='Wt', lambdaRisk = 0.25, strikeQuantile = 0.5,
+                       capQuantile = 0.95, redo = False, save = False):
+  capX = sweWtSynth.quantile(capQuantile)
+  snowPayoutSim = wang(pd.DataFrame({'asset': sweWtSynth, 'prob': 1/sweWtSynth.shape[0]}), contractType='put',
+                              lam=lambdaRisk, k=sweWtSynth.quantile(strikeQuantile), premOnly=False)
+  snowPayoutSim = snowPayoutSim + wang(pd.DataFrame({'asset': sweWtSynth, 'prob': 1/sweWtSynth.shape[0]}),
+                                      contractType='shortcall', lam=0, k=sweWtSynth.quantile(strikeQuantile),
+                                      cap=capX, premOnly=False)
+  capY = np.min(snowPayoutSim)
+#     snowPayoutSim = [payout(x, capX, capY) for x in sweWtSynth]
+  return (capX, capY)
+
+
+
+
+##########################################################################
+######### get quadratic equations for capX, capY as fn of wtFeb, for particular lambda
+# Note, we do put here, since sell_call side of swap uses lambda=0 and will just be a constant shift. ###########
+############## Returns dataframe with premium shift for each lambda #########################################
+##########################################################################
+
+def snow_contract_params_lambda(dir_generated_inputs, sweSynth, lamList, contractType, strikeQuantile, capQuantile):
+  if (contractType == 'cfd'):
+    params = np.empty((lamList.shape[0], 6))
+    wts = np.arange(0, 11)/10
+    sweGrid = {}
+    for w in wts:
+      sweGrid[w] = w*sweSynth.danFeb + (1-w)*sweSynth.danApr 
+    for i,lam in enumerate(lamList):
+      capX, capY = [], []
+      for w in wts:
+        caps = snow_contract_params(dir_generated_inputs, sweGrid[w], contractType = 'cfd',lambdaRisk = lam, 
+                                        strikeQuantile = strikeQuantile,capQuantile = capQuantile, redo = True, save = False)
+        capX.append(caps[0])
+        capY.append(caps[1])
+      capXmod = np.poly1d(np.polyfit(wts, capX, 2))
+      capYmod = np.poly1d(np.polyfit(wts, capY, 2))
+      coefs = []
+      
+      params[i,:] = list(capXmod.coef) + list(capYmod.coef)
+  return (params)
+
+
+
+##########################################################################
 ######### get shift in cfd loading based on lambda, relative to baseline payouts with lambda = 0.25.
 # Note, we do put here, since sell_call side of swap uses lambda=0 and will just be a constant shift. ###########
 ############## Returns dataframe with premium shift for each lambda #########################################
@@ -295,8 +408,11 @@ def plot_contract(dir_figs, sweVal, payoutPutSim, payoutShortCallSim, payoutCfdS
                                         lam=lambda_shifts[i], k=strike, premOnly=True)
 
   ### plot regime as function of debt and uncertain params
-  plt.figure()
-  ax = plt.subplot2grid((3,1), (0, 0))
+  fig = plt.figure(figsize=(7,4))
+  gs1 = fig.add_gridspec(nrows=3, ncols=1, left=0, right=1, wspace=0.0, hspace=0.1)
+  ax = fig.add_subplot(gs1[0,0])
+  ax2 = fig.add_subplot(gs1[1:,0])
+  
   # ax.set_xlabel('SWE Index (inch)')
   ax.set_ylabel('Density')
   # ax.set_xticks(np.arange(0.85, 0.98, 0.04))
@@ -307,34 +423,35 @@ def plot_contract(dir_figs, sweVal, payoutPutSim, payoutShortCallSim, payoutCfdS
   ax.tick_params(axis='y', which='both', labelleft=False,labelright=False)
   # ax.xaxis.set_label_position('top')
 
-  sbn.kdeplot(sweVal, ax=ax, c='k', lw=2)
+  sns.kdeplot(sweVal, ax=ax, c='k', lw=2)
 
-  ax = plt.subplot2grid((3, 1), (1, 0), rowspan=2)
-  ax.set_xlabel('SWE Index (inch)')
-  ax.set_ylabel('Net Payout ($M)')
-  ax.set_xlim([0, 60])
-  ax.tick_params(axis='y', which='both', labelleft=False,labelright=False)
-  ax.axhline(0, color='grey', linestyle=':')
+  ax2.set_xlabel('SWE Index (inch)')
+  ax2.set_ylabel('Net Payout ($M)')
+  ax2.set_xlim([0, 60])
+  ax2.tick_params(axis='y', which='both', labelleft=False,labelright=False)
+  ax2.axhline(0, color='grey', linestyle=':')
   kinkY = np.min(payoutCfdSim)
   kinkX = np.min(sweVal.loc[payoutCfdSim < kinkY + eps])
-  line3, = ax.plot([0, kinkX, 60], [kinkX + kinkY, kinkY, kinkY], color=col[0], linewidth=2)
+  line3, = ax2.plot([0, kinkX, 60], [kinkX + kinkY, kinkY, kinkY], color=col[0], linewidth=2)
   if (plot_type == 'lambda'):
-    line4, = ax.plot([0, kinkX, 60], [kinkX + kinkY + lambda_shifts[0], kinkY + lambda_shifts[0], kinkY + lambda_shifts[0]], color=col[0], ls='--', linewidth=2)
-    line5, = ax.plot([0, kinkX, 60], [kinkX + kinkY + lambda_shifts[1], kinkY + lambda_shifts[1], kinkY + lambda_shifts[1]], color=col[0], ls=':', linewidth=2)
-    plt.legend([line4,line3,line5],['No loading', 'Baseline loading', 'High loading'],loc='upper right')
+    line4, = ax2.plot([0, kinkX, 60], [kinkX + kinkY + lambda_shifts[0], kinkY + lambda_shifts[0], kinkY + lambda_shifts[0]], color=col[0], ls='--', linewidth=2)
+    line5, = ax2.plot([0, kinkX, 60], [kinkX + kinkY + lambda_shifts[1], kinkY + lambda_shifts[1], kinkY + lambda_shifts[1]], color=col[0], ls=':', linewidth=2)
+    plt.legend([line4,line3,line5],['No loading', 'Baseline loading', 'High loading'], loc='right', 
+                bbox_to_anchor=(1.34, 0.75), ncol=1, borderaxespad=0.)
     plot_name = dir_figs + 'fig5.jpg'
   elif (plot_type=='composite'):
     # plot put
     kinkY = np.min(payoutPutSim)
     kinkX = np.min(sweVal.loc[payoutPutSim < kinkY + eps])
-    line1, = ax.plot([0, kinkX, 60], [kinkX + kinkY, kinkY, kinkY], color=col[3],  lw=2, ls='--')
+    line1, = ax2.plot([0, kinkX, 60], [kinkX + kinkY, kinkY, kinkY], color=col[3],  lw=2, ls='--')
     # plot shortcall
     kinkStrikeY = np.max(payoutShortCallSim)
     kinkStrikeX = np.max(sweVal.loc[payoutShortCallSim > kinkStrikeY - eps])
     kinkCapY = np.min(payoutShortCallSim)
     kinkCapX = np.min(sweVal.loc[payoutShortCallSim < kinkCapY + eps])
-    line2, = ax.plot([0, kinkStrikeX, kinkCapX, 60], [kinkStrikeY, kinkStrikeY, kinkCapY, kinkCapY], color=col[2], lw=2, ls='--')
-    plt.legend([line1,line2,line3],['Long put','Short capped call','Capped contract for differences'],loc='lower left')
+    line2, = ax2.plot([0, kinkStrikeX, kinkCapX, 60], [kinkStrikeY, kinkStrikeY, kinkCapY, kinkCapY], color=col[2], lw=2, ls='--')
+    plt.legend([line1,line2,line3],['Long put','Short capped call','Capped contract for differences'], loc='right', 
+                bbox_to_anchor=(1.34, 0.75), ncol=1, borderaxespad=0.)
     plot_name = dir_figs + 'figS3.jpg'
 
   plt.savefig(plot_name, dpi=1200)
@@ -483,10 +600,9 @@ def plot_cfd_slope_effect(dir_figs, sweWtSynth, revSimWyr, payoutCfdSim, meanRev
 ######### save synthetic data needed for moea ###########
 ############## Saves csv, no return #########################################
 ##########################################################################
-def save_synthetic_data_moea(dir_generated_inputs, sweSynth, revSimWyr, payoutFebSim, payoutAprSim):
+def save_synthetic_data_moea(dir_generated_inputs, sweSynth, revSimWyr):
   synthetic_data = pd.DataFrame({'sweFeb': sweSynth.danFeb.values, 'sweApr': sweSynth.danApr.values, 'revenue': revSimWyr.values,
-                       'cfdFeb': payoutFebSim.values, 'cfdApr': payoutAprSim.values
-                       }).iloc[1:, :].reset_index(drop=True)[['sweFeb', 'sweApr', 'revenue', 'cfdFeb','cfdApr']]
+                                }).iloc[1:, :].reset_index(drop=True)[['sweFeb', 'sweApr', 'revenue']]
   synthetic_data.to_csv(dir_generated_inputs + 'synthetic_data.txt',sep=' ', index=False)
 
 
