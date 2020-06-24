@@ -7,9 +7,9 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --export=ALL
 #SBATCH --exclusive
-#SBATCH -t 3:00:00
+#SBATCH -t 4:00:00
 
-NFE=15000
+NFE=20000
 seed_sample=1
 
 time {
@@ -17,7 +17,7 @@ time {
   do
     echo
     echo "Seed "${seed_borg}
-    time mpirun main_borgms $seed_borg $seed_sample $NFE 
+    time mpirun dv3_borgms $seed_borg $seed_sample $NFE 
   done
   echo
   echo "Finished all seeds "
