@@ -1,6 +1,6 @@
 ~*
 *~
 *.o
-dv3_*
+problem_*
 *.out
 main_*

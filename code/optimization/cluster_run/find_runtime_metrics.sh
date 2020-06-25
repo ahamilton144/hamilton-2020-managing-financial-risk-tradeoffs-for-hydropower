@@ -3,12 +3,13 @@ SCENARIO=$1
 PARAM=$2
 NSEEDS=$3
 
-dir=../../data/optimization_output/${SCENARIO}
+dir=../../../data/optimization_output/${SCENARIO}
+mkdir ${dir}/metrics
 ndv=2
 nobj=2
 seeds=$(seq 1 ${NSEEDS})
 
-JAVA_ARGS="-cp ../misc/MOEAFramework-2.12-Demo.jar"
+JAVA_ARGS="-cp ../../misc/MOEAFramework-2.12-Demo.jar"
 
 for seed in ${seeds}
 do

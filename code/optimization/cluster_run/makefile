@@ -9,25 +9,25 @@ ifneq (, $(findstring SunOS, $(UNAME_S)))
     LIBS += -lnsl -lsocket -lresolv
 endif
 
-all: dv3_borgms dv3_sensitivity_borgms dv3_retest
+all: problem_borgms problem_sensitivity_borgms problem_retest
 
-dv3_borgms: dv3_borgms.o moeaframework.o borgms.o mt19937ar.o
-	$(CXX) dv3_borgms.o moeaframework.o borgms.o mt19937ar.o -o dv3_borgms
+problem_borgms: problem_borgms.o moeaframework.o borgms.o mt19937ar.o
+	$(CXX) problem_borgms.o moeaframework.o borgms.o mt19937ar.o -o problem_borgms
 
-dv3_sensitivity_borgms: dv3_sensitivity_borgms.o moeaframework.o borgms.o mt19937ar.o
-	$(CXX) dv3_sensitivity_borgms.o moeaframework.o borgms.o mt19937ar.o -o dv3_sensitivity_borgms
+problem_sensitivity_borgms: problem_sensitivity_borgms.o moeaframework.o borgms.o mt19937ar.o
+	$(CXX) problem_sensitivity_borgms.o moeaframework.o borgms.o mt19937ar.o -o problem_sensitivity_borgms
 
-dv3_retest: dv3_retest.o moeaframework.o borgms.o mt19937ar.o
-	$(CXX) dv3_retest.o moeaframework.o borgms.o mt19937ar.o -o dv3_retest
+problem_retest: problem_retest.o moeaframework.o borgms.o mt19937ar.o
+	$(CXX) problem_retest.o moeaframework.o borgms.o mt19937ar.o -o problem_retest
 
-dv3_borgms.o: main.cpp ./../../misc/borg/moeaframework.h ./../../misc/boostutil.h ./../../misc/borg/borgms.h
-	$(CXX) $(CXXFLAGS) $(INC) main.cpp -o dv3_borgms.o
+problem_borgms.o: main.cpp ./../../misc/borg/moeaframework.h ./../../misc/boostutil.h ./../../misc/borg/borgms.h
+	$(CXX) $(CXXFLAGS) $(INC) main.cpp -o problem_borgms.o
 
-dv3_sensitivity_borgms.o: main_sensitivity.cpp ./../../misc/borg/moeaframework.h ./../../misc/boostutil.h ./../../misc/borg/borgms.h
-	$(CXX) $(CXXFLAGS) $(INC) main_sensitivity.cpp -o dv3_sensitivity_borgms.o
+problem_sensitivity_borgms.o: main_sensitivity.cpp ./../../misc/borg/moeaframework.h ./../../misc/boostutil.h ./../../misc/borg/borgms.h
+	$(CXX) $(CXXFLAGS) $(INC) main_sensitivity.cpp -o problem_sensitivity_borgms.o
 
-dv3_retest.o: main_retest.cpp ./../../misc/borg/moeaframework.h ./../../misc/boostutil.h ./../../misc/borg/borgms.h
-	$(CXX) $(CXXFLAGS) $(INC) main_retest.cpp -o dv3_retest.o
+problem_retest.o: main_retest.cpp ./../../misc/borg/moeaframework.h ./../../misc/boostutil.h ./../../misc/borg/borgms.h
+	$(CXX) $(CXXFLAGS) $(INC) main_retest.cpp -o problem_retest.o
 
 moeaframework.o: ./../../misc/borg/moeaframework.c ./../../misc/borg/moeaframework.h
 	$(CXX) $(CXXFLAGS) ./../../misc/borg/moeaframework.c
@@ -40,6 +40,6 @@ mt19937ar.o: ./../../misc/borg/mt19937ar.c ./../../misc/borg/mt19937ar.h
 
 clean:
 	rm -rf *.o
-	rm dv3_borgms
-	rm dv3_sensitivity_borgms
-	rm dv3_retest
+	rm problem_borgms
+	rm problem_sensitivity_borgms
+	rm problem_retest

@@ -10,13 +10,13 @@ sed -i 's/define BORG_RUN_TYPE 1/define BORG_RUN_TYPE 2/' main.cpp
 sed -i 's+#include "./../../misc/borg/borg.h"+//#include "./../../misc/borg/borg.h"+' main.cpp
 sed -i 's+//#include "./../../misc/borg/borgms.h"+#include "./../../misc/borg/borgms.h"+' main.cpp
 sed -i 's+// #include "./../../misc/borg/borgms.h"+#include "./../../misc/borg/borgms.h"+' main.cpp
-make dv3_borgms
+make problem_borgms
 
 cp main.cpp main_sensitivity.cpp
 sed -i 's/define SENSITIVITY_ANALYSIS 0/define SENSITIVITY_ANALYSIS 1/' main_sensitivity.cpp
-make dv3_sensitivity_borgms
+make problem_sensitivity_borgms
 
 cp main.cpp main_retest.cpp
 sed -i 's/define BORG_RUN_TYPE 2/define BORG_RUN_TYPE 0/' main_retest.cpp
-make dv3_retest
+make problem_retest
 

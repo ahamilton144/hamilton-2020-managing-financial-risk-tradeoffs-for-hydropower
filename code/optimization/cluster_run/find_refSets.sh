@@ -4,7 +4,7 @@ SCENARIO=$1
 PARAM=$2
 
 dir=../../../data/optimization_output/${SCENARIO}
-ndv=3
+ndv=2
 nobj=2
 eps1=0.075
 eps2=0.225

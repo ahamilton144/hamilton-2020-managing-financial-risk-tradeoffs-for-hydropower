@@ -45,7 +45,7 @@
 #include <boost/accumulators/statistics/moment.hpp>
 #include <boost/accumulators/statistics/tail_quantile.hpp>
 #include "./../../misc/boostutil.h"
-//////////#include "./../../misc/borg/borg.h"
+//#include "./../../misc/borg/borg.h"
 #include "./../../misc/borg/borgms.h"
 #include "./../../misc/borg/moeaframework.h"
 
@@ -57,7 +57,7 @@
 #define INDEX_STOCHASTIC_SNOW_FEB 0    
 #define INDEX_STOCHASTIC_SNOW_APR 1    
 #define MEAN_REVENUE 127.80086602479503     // mean revenue in absense of any financial risk mgmt. Make sure this is consistent with current input synthetic_data.txt revenue column.
-#define MIN_SLOPE_CFD 0.005          // if contract slope dv < $0.05M/inch, act as if 0.
+#define MIN_SLOPE_CFD 0.005          // if contract slope dv < $0.005M/inch, act as if 0.
 #define MIN_MAX_FUND 0.05               // if max fund dv < $0.05M, act as if 0.
 #define NORMALIZE_SLOPE_CFD 4.0
 #define NORMALIZE_FUND 250.0
@@ -68,7 +68,13 @@
 #define EPS_OBJ2 0.225
 #define NUM_CONSTRAINTS 1
 #define EPS_CONS1 0.05
-#define NUM_DV  3
+#define OPTIMIZE_CFD_WEIGHT 0       // directly optimize weight of feb vs apr observations for cfd contract? 1=yes, 0=no. if zero, the weight is selected from regression of feb/apr swe vs revenue.
+#if OPTIMIZE_CFD_WEIGHT==0
+#define NUM_DV 2
+#define CFD_WEIGHT_FEB 0.311962707367
+#else
+#define NUM_DV 3
+#endif
 #define NUM_PARAM 11         // cost_fraction, discount_rate, delta_interest_fund, delta_interest_debt, lambda, lam_capX_2, lam_capX_1, lam_capX_0, lam_capY_2, lam_capY_1, lam_capY_0
 #define NUM_PARAM_CFD 6     // lam_capX_2, lam_capX_1, lam_capX_0, lam_capY_2, lam_capY_1, lam_capY_0
 #define NUM_PARAM_SAMPLES 151  // number of LHC samples of financial parameters in LHC file, including baseline. 
@@ -143,7 +149,11 @@ void portfolioProblem(double *problem_dv, double *problem_objs, double *problem_
     if (slope_cfd < MIN_SLOPE_CFD){
         slope_cfd = 0.0;
     }
+#if OPTIMIZE_CFD_WEIGHT==1
     double snow_wt_feb = problem_dv[2];
+#else
+    double snow_wt_feb = CFD_WEIGHT_FEB;
+#endif
 
     double total_payout_cfd;
     double snow_feb, snow_apr, snow_index;
@@ -282,6 +292,7 @@ int main(int argc, char* argv[]) {
 
     FILE *myfile;
     myfile = fopen("./../../../data/generated_inputs/synthetic_data.txt", "r");
+
     int linenum = 0;
     char testbuffer[BUFFER_MAX_SIZE];
 
@@ -405,8 +416,9 @@ int main(int argc, char* argv[]) {
         // decision variables
         problem_dv[0] = pareto[0][i];
         problem_dv[1] = pareto[1][i];
+#if OPTIMIZE_CFD_WEIGHT==1
         problem_dv[2] = pareto[2][i];
-
+#endif
         // params from LHC sample
         cost_fraction = param_LHC_sample[0][LHC_set];             // fraction of MEAN_REVENUE that is must-meet costs
         double delta = param_LHC_sample[1][LHC_set];              // discount rate, as %/yr
@@ -469,7 +481,9 @@ int main(int argc, char* argv[]) {
         // Set all the parameter bounds and epsilons
         BORG_Problem_set_bounds(problem, 0, 0, NORMALIZE_FUND);            //bounds for reserve max size
         BORG_Problem_set_bounds(problem, 1, 0, NORMALIZE_SLOPE_CFD);            //bounds for index contract slope 
+#if OPTIMIZE_CFD_WEIGHT==1
         BORG_Problem_set_bounds(problem, 2, 0, 1);            //bounds for snow_wt_feb
+#endif
 
         BORG_Problem_set_epsilon(problem, 0, EPS_OBJ1); // avg_annualized_cashflow (units $M, so 0.01=$10,000)
         BORG_Problem_set_epsilon(problem, 1, EPS_OBJ2); // q95_max_debt (units $M, so 0.01=$10,000)
