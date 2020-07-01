@@ -133,7 +133,7 @@ def plot_SweFebApr_SweGen_SweRev(dir_figs, swe, gen, revHist, sweSynth, genSynth
   genSynthWyr['sweWt'] = (sweWtParams[0] * genSynthWyr['sweFeb'] + sweWtParams[1] * genSynthWyr['sweApr'])
   genWyr['sweWt'] = (sweWtParams[0] * genWyr['sweFeb'] + sweWtParams[1] * genWyr['sweApr'])
 
-  fig = plt.figure(figsize=(8.5,3))
+  fig = plt.figure(figsize=(7,2.5))
   gs1 = fig.add_gridspec(nrows=1, ncols=3, left=0, right=1, wspace=0.6, hspace=0.)
 
   ax = fig.add_subplot(gs1[0,0])
@@ -170,7 +170,7 @@ def plot_SweFebApr_SweGen_SweRev(dir_figs, swe, gen, revHist, sweSynth, genSynth
   ax1.scatter(sweWtHist.loc[1988:], revHistWyr, alpha=0.6, color=col[0], marker='^', s=40)
 
   ax0.legend([p1,p2],['Historic','Synthetic'], ncol=2, bbox_to_anchor=(1.27,-0.3))
-  plt.savefig(dir_figs + 'fig3.jpg', bbox_inches='tight', dpi=1200)
+  plt.savefig(dir_figs + 'fig_sweCorrelations.jpg', bbox_inches='tight', dpi=1200)
 
 
 
@@ -437,8 +437,8 @@ def plot_contract(dir_figs, sweVal, payoutPutSim, payoutShortCallSim, payoutCfdS
     line4, = ax2.plot([0, kinkX, 60], [kinkX + kinkY + lambda_shifts[0], kinkY + lambda_shifts[0], kinkY + lambda_shifts[0]], color=col[0], ls='--', linewidth=2)
     line5, = ax2.plot([0, kinkX, 60], [kinkX + kinkY + lambda_shifts[1], kinkY + lambda_shifts[1], kinkY + lambda_shifts[1]], color=col[0], ls=':', linewidth=2)
     plt.legend([line4,line3,line5],['No loading', 'Baseline loading', 'High loading'], loc='right', 
-                bbox_to_anchor=(1.34, 0.75), ncol=1, borderaxespad=0.)
-    plot_name = dir_figs + 'fig5.jpg'
+                bbox_to_anchor=(1.34, 0.5), ncol=1, borderaxespad=0.)
+    plot_name = dir_figs + 'fig_contractLambda.jpg'
   elif (plot_type=='composite'):
     # plot put
     kinkY = np.min(payoutPutSim)
@@ -450,11 +450,11 @@ def plot_contract(dir_figs, sweVal, payoutPutSim, payoutShortCallSim, payoutCfdS
     kinkCapY = np.min(payoutShortCallSim)
     kinkCapX = np.min(sweVal.loc[payoutShortCallSim < kinkCapY + eps])
     line2, = ax2.plot([0, kinkStrikeX, kinkCapX, 60], [kinkStrikeY, kinkStrikeY, kinkCapY, kinkCapY], color=col[2], lw=2, ls='--')
-    plt.legend([line1,line2,line3],['Long put','Short capped call','Capped contract for differences'], loc='right', 
-                bbox_to_anchor=(1.34, 0.75), ncol=1, borderaxespad=0.)
-    plot_name = dir_figs + 'figS3.jpg'
+    plt.legend([line1,line2,line3],['Long put','Short capped call','Capped contract\nfor differences'], loc='right', 
+                bbox_to_anchor=(1.34, 0.5), ncol=1, borderaxespad=0.)
+    plot_name = dir_figs + 'fig_contractComponents.jpg'
 
-  plt.savefig(plot_name, dpi=1200)
+  plt.savefig(plot_name, bbox_inches='tight', dpi=1200)
 
   return
 
@@ -549,9 +549,9 @@ def plot_swe_hedged_revenue(dir_figs, sweWtSynth, revSimWyr, payoutCfdSim, meanR
   eb3[-1][0].set_linewidth(3)
 
   leg = plt.legend((eb1, eb3), ('Unhedged', 'Hedged'),
-                   loc='upper left', borderaxespad=0.)
+                   loc='upper left', bbox_to_anchor=(0.02,0.98), borderaxespad=0.)
 
-  plot_name = dir_figs + 'fig7.jpg'
+  plot_name = dir_figs + 'fig_sweHedged.jpg'
 
   plt.savefig(plot_name, bbox_extra_artists=([leg]), bbox_inches='tight', dpi=1200)
 
@@ -587,10 +587,10 @@ def plot_cfd_slope_effect(dir_figs, sweWtSynth, revSimWyr, payoutCfdSim, meanRev
   plt.xlabel('Expected Hedged Net Revenue ($M/year)')
   plt.ylabel('Q05 Hedged Net Revenue ($M/year)')
   cbar = plt.colorbar(cmapScalar)
-  cbar.ax.set_ylabel('Contract slope ($\$$M/inch)')
+  cbar.ax.set_ylabel('Contract slope ($\$$M/inch)', rotation=270, labelpad=20)
 
-  plot_name = dir_figs + 'fig6.jpg'
-  plt.savefig(plot_name, dpi=1200)
+  plot_name = dir_figs + 'fig_cfdMarginal.jpg'
+  plt.savefig(plot_name, bbox_inches='tight', dpi=1200)
 
   return
 

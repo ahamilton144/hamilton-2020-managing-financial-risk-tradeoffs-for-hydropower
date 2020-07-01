@@ -360,8 +360,8 @@ def synthetic_generation(dir_generated_inputs, dir_figs, gen, sweSynth, redo = F
             plt.plot([x0, x1], [y0, y1], c=col[0])
           if (x1 < max_x):
             plt.plot([x1, max_x], [y1, y1], c=col[0])
-          plt.annotate(wmnths[wmnth-1], xy=(38,3))
-      plot_name = dir_figs + 'figS2.jpg'
+          plt.annotate(wmnths[wmnth-1], xy=(35,6))
+      plot_name = dir_figs + 'fig_hydroRegressions.jpg'
       plt.savefig(plot_name, dpi=1200)
 
 
@@ -780,182 +780,132 @@ def synthetic_power(dir_generated_inputs, power, redo = False, save = False):
 ######### plot historical vs synthetic hydro generation and power prices (fig 4)###########
 ############## Returns figure #########################################
 ##########################################################################
-def plot_historical_synthetic_generation_power(dir_figs, gen, genSynth, power, powSynth, genOnly, genCombined, powerOnly):
+def plot_historical_synthetic_generation_power(dir_figs, gen, genSynth, power, powSynth):
   # plot_name: include directory, no extension
   plt.figure()
-  if (powerOnly == False):
-    if (genCombined):
-      # compare monthly trends to observed record
-      genMonths = pd.DataFrame({'wmnth': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    
+  # plot boxplot of generation for each wmnth
+  gen['sweAprThirds'] = 'average'
+  gen.sweAprThirds.loc[gen.sweApr > gen.sweWt.quantile(0.67)] = 'wet'
+  gen.sweAprThirds.loc[gen.sweApr < gen.sweWt.quantile(0.33)] = 'dry'
+  my_palette = {'wet': col[0], 'average': col[2], 'dry': col[3]}
+
+  genSynth['sweAprThirds'] = 'average'
+  genSynth.sweAprThirds.loc[genSynth.sweApr > gen.sweWt.quantile(0.67)] = 'wet'
+  genSynth.sweAprThirds.loc[genSynth.sweApr < gen.sweWt.quantile(0.33)] = 'dry'
+
+  genMonthsDry = pd.DataFrame({'wmnth': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
                                 'meanHist': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
-                                  lambda x: gen['tot'].loc[gen['wmnth'] == x].mean()),
+                                  lambda x: gen['tot'].loc[(gen['wmnth'] == x) & (gen.sweAprThirds == 'dry')].mean())/1000,
                                 'stdHist': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
-                                  lambda x: gen['tot'].loc[gen['wmnth'] == x].std()),
+                                  lambda x: gen['tot'].loc[(gen['wmnth'] == x) & (gen.sweAprThirds == 'dry')].std())/1000,
                                 'meanSynth': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
-                                  lambda x: genSynth['gen'].loc[genSynth['wmnth'] == x].mean()),
+                                  lambda x: genSynth['gen'].loc[(genSynth['wmnth'] == x) & (genSynth.sweAprThirds == 'dry')].mean())/1000,
                                 'stdSynth': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
-                                  lambda x: genSynth['gen'].loc[genSynth['wmnth'] == x].std())
+                                  lambda x: genSynth['gen'].loc[(genSynth['wmnth'] == x) & (genSynth.sweAprThirds == 'dry')].std())/1000,
                                 })
+  genMonthsWet = pd.DataFrame({'wmnth': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+                                'meanHist': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
+                                  lambda x: gen['tot'].loc[(gen['wmnth'] == x) & (gen.sweAprThirds == 'wet')].mean())/1000,
+                                'stdHist': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
+                                  lambda x: gen['tot'].loc[(gen['wmnth'] == x) & (gen.sweAprThirds == 'wet')].std())/1000,
+                                'meanSynth': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
+                                  lambda x: genSynth['gen'].loc[(genSynth['wmnth'] == x) & (genSynth.sweAprThirds == 'wet')].mean())/1000,
+                                'stdSynth': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
+                                  lambda x: genSynth['gen'].loc[(genSynth['wmnth'] == x) & (genSynth.sweAprThirds == 'wet')].std())/1000,
+                                })
+  genMonthsAverage = pd.DataFrame({'wmnth': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+                                    'meanHist': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
+                                      lambda x: gen['tot'].loc[(gen['wmnth'] == x) & (gen.sweAprThirds == 'average')].mean())/1000,
+                                    'stdHist': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
+                                      lambda x: gen['tot'].loc[(gen['wmnth'] == x) & (gen.sweAprThirds == 'average')].std())/1000,
+                                    'meanSynth': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
+                                      lambda x: genSynth['gen'].loc[(genSynth['wmnth'] == x) & (genSynth.sweAprThirds == 'average')].mean())/1000,
+                                    'stdSynth': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
+                                      lambda x: genSynth['gen'].loc[(genSynth['wmnth'] == x) & (genSynth.sweAprThirds == 'average')].std())/1000,
+                                    })
 
-      ax = plt.subplot2grid((1, 1), (0, 0))
-      ax.set_xlabel('Month')
-      ax.set_ylabel('Generation (GWh/month)')
-      ax.set_xlim([-0.5, 11.5])
-      ax.set_xticks(genMonths.index, ['O', 'N', 'D', 'J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S'])
+  #  plot monthly ranges with wet-avg-dry separated, std as error bars
+  ax = plt.subplot2grid((2,1), (0, 0))
+  ax.annotate('a)', xy=(0.01, 0.89), xycoords='axes fraction')
 
-      eb1 = ax.errorbar(genMonths.index - 0.075, genMonths.meanHist,
-                         yerr=genMonths.stdHist, color=col[0], marker = 's', ms=3, mew=1, mec=col[0], linestyle='None')
-      eb1[-1][0].set_linewidth(2)
-      eb2 = ax.errorbar(genMonths.index + 0.075, genMonths.meanSynth,
-                         yerr=genMonths.stdSynth, color=col[0], marker = 's', markerfacecolor='white',
-                         markeredgecolor=col[0], mew=1, ms=3,linestyle='None')
-      eb2[-1][0].set_linestyle('--')
-      eb2[-1][0].set_linewidth(2)
-      for i in range(12):
-        ax.axvline(i + 0.5, color='lightgrey', lw=1)
+  ax.tick_params(axis='x', which='both', labelbottom=False)
+  ax.set_ylabel('Generation\n(TWh/month)')
+  ax.set_xlim([-0.5,11.5])
+  ax.set_xticks(genMonthsWet.index, ['O', 'N', 'D', 'J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S'])
+  eb1 = ax.errorbar(genMonthsAverage.index-0.075, genMonthsAverage.meanHist,
+                      yerr=genMonthsAverage.stdHist, color=my_palette['average'], marker = '^', ms=4, mew=1, mec=my_palette['average'],
+                      linestyle='None')
+  eb1[-1][0].set_linewidth(2)
+  eb2 = ax.errorbar(genMonthsAverage.index+0.075, genMonthsAverage.meanSynth,
+                      yerr=genMonthsAverage.stdSynth, color=my_palette['average'], marker = '^', markerfacecolor='white',
+                      markeredgecolor=my_palette['average'], mew=1, ms=4,linestyle='None')
+  eb2[-1][0].set_linestyle('--')
+  eb2[-1][0].set_linewidth(2)
+  eb3 = ax.errorbar(genMonthsDry.index-0.375, genMonthsDry.meanHist,
+                      yerr=genMonthsDry.stdHist, color=my_palette['dry'], marker = 's', ms=4, mew=1, mec=my_palette['dry'],
+                      linestyle='None')
+  eb3[-1][0].set_linewidth(2)
+  eb4 = ax.errorbar(genMonthsDry.index-0.225, genMonthsDry.meanSynth,
+                      yerr=genMonthsDry.stdSynth, color=my_palette['dry'], marker = 's', markerfacecolor='white',
+                      markeredgecolor=my_palette['dry'], mew=1, ms=4,linestyle='None')
+  eb4[-1][0].set_linestyle('--')
+  eb4[-1][0].set_linewidth(2)
+  eb5 = ax.errorbar(genMonthsWet.index+0.225, genMonthsWet.meanHist,
+                      yerr=genMonthsWet.stdHist, color=my_palette['wet'], marker = 'o', ms=4, mew=1, mec=my_palette['wet'],
+                      linestyle='None')
+  eb5[-1][0].set_linewidth(2)
+  eb6 = ax.errorbar(genMonthsWet.index + 0.375, genMonthsWet.meanSynth,
+                      yerr=genMonthsWet.stdSynth, color=my_palette['wet'], marker = 'o', markerfacecolor='white',
+                      markeredgecolor=my_palette['wet'], mew=1, ms=4,linestyle='None')
+  eb6[-1][0].set_linestyle('--')
+  eb6[-1][0].set_linewidth(2)
+  for i in range(12):
+    ax.axvline(i + 0.5, color='lightgrey', lw=1)
 
-      leg1 = plt.legend((eb1, eb2), ('Historic', 'Synthetic'), loc='upper left')
+  leg1 = ax.legend((eb3,eb4,eb1,eb2,eb5,eb6),
+            ('Dry Historic','Dry Synthetic','Avg Historic','Avg Synthetic','Wet Historic','Wet Synthetic'),
+            bbox_to_anchor=(1.43, 0.5), loc='right', ncol=1, borderaxespad=0.)
+      
+  # now plot historical vs synthetic power prices
+  powMonths = pd.DataFrame({'wmnth': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+                            'meanHist': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
+                              lambda x: power['priceMean'].loc[power['wmnth'] == x].mean()),
+                            'stdHist': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
+                              lambda x: power['priceMean'].loc[power['wmnth'] == x].std()),
+                            'meanSynth': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
+                              lambda x: powSynth['powPrice'].loc[powSynth['wmnth'] == x].mean()),
+                            'stdSynth': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
+                              lambda x: powSynth['powPrice'].loc[powSynth['wmnth'] == x].std()),
+                            })
 
-    else:
-      # plot boxplot of generation for each wmnth
-      gen['sweAprThirds'] = 'average'
-      gen.sweAprThirds.loc[gen.sweApr > gen.sweWt.quantile(0.67)] = 'wet'
-      gen.sweAprThirds.loc[gen.sweApr < gen.sweWt.quantile(0.33)] = 'dry'
-      my_palette = {'wet': col[0], 'average': col[2], 'dry': col[3]}
+  ax = plt.subplot2grid((2,1), (1,0))
+  ax.annotate('b)', xy=(0.01, 0.89), xycoords='axes fraction')
+  
+  ax.set_xlabel('Month')
+  ax.set_ylabel('Price\n($/MWh)')
+  ax.set_xlim([-0.5,11.5])
 
-      genSynth['sweAprThirds'] = 'average'
-      genSynth.sweAprThirds.loc[genSynth.sweApr > gen.sweWt.quantile(0.67)] = 'wet'
-      genSynth.sweAprThirds.loc[genSynth.sweApr < gen.sweWt.quantile(0.33)] = 'dry'
+  ax.set_xticks(powMonths.index)
+  ax.set_xticklabels(['O', 'N', 'D', 'J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S'])
 
-      genMonthsDry = pd.DataFrame({'wmnth': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-                                   'meanHist': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
-                                     lambda x: gen['tot'].loc[(gen['wmnth'] == x) & (gen.sweAprThirds == 'dry')].mean())/1000,
-                                   'stdHist': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
-                                     lambda x: gen['tot'].loc[(gen['wmnth'] == x) & (gen.sweAprThirds == 'dry')].std())/1000,
-                                   'meanSynth': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
-                                     lambda x: genSynth['gen'].loc[(genSynth['wmnth'] == x) & (genSynth.sweAprThirds == 'dry')].mean())/1000,
-                                   'stdSynth': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
-                                     lambda x: genSynth['gen'].loc[(genSynth['wmnth'] == x) & (genSynth.sweAprThirds == 'dry')].std())/1000,
-                                   })
-      genMonthsWet = pd.DataFrame({'wmnth': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-                                   'meanHist': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
-                                     lambda x: gen['tot'].loc[(gen['wmnth'] == x) & (gen.sweAprThirds == 'wet')].mean())/1000,
-                                   'stdHist': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
-                                     lambda x: gen['tot'].loc[(gen['wmnth'] == x) & (gen.sweAprThirds == 'wet')].std())/1000,
-                                   'meanSynth': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
-                                     lambda x: genSynth['gen'].loc[(genSynth['wmnth'] == x) & (genSynth.sweAprThirds == 'wet')].mean())/1000,
-                                   'stdSynth': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
-                                     lambda x: genSynth['gen'].loc[(genSynth['wmnth'] == x) & (genSynth.sweAprThirds == 'wet')].std())/1000,
-                                   })
-      genMonthsAverage = pd.DataFrame({'wmnth': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-                                       'meanHist': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
-                                         lambda x: gen['tot'].loc[(gen['wmnth'] == x) & (gen.sweAprThirds == 'average')].mean())/1000,
-                                       'stdHist': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
-                                         lambda x: gen['tot'].loc[(gen['wmnth'] == x) & (gen.sweAprThirds == 'average')].std())/1000,
-                                       'meanSynth': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
-                                         lambda x: genSynth['gen'].loc[(genSynth['wmnth'] == x) & (genSynth.sweAprThirds == 'average')].mean())/1000,
-                                       'stdSynth': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
-                                         lambda x: genSynth['gen'].loc[(genSynth['wmnth'] == x) & (genSynth.sweAprThirds == 'average')].std())/1000,
-                                       })
+  eb1 = ax.errorbar(powMonths.index - 0.1, powMonths.meanHist,
+                      yerr=powMonths.stdHist, color=col[0], marker = 's', ms=4, mew=1, mec=col[0], linestyle='None')
+  eb1[-1][0].set_linewidth(2)
+  eb2 = ax.errorbar(powMonths.index + 0.1, powMonths.meanSynth,
+                      yerr=powMonths.stdSynth, color=col[0], marker = 's', markerfacecolor='white',
+                      markeredgecolor=col[0], mew=1, ms=4,linestyle='None')
+  eb2[-1][0].set_linestyle('--')
+  eb2[-1][0].set_linewidth(2)
 
-      #  plot monthly ranges with wet-avg-dry separated, std as error bars
-      if (genOnly == False):
-        ax = plt.subplot2grid((2,1), (0, 0))
-        ax.tick_params(axis='x', which='both', labelbottom=False)
-      else:
-        ax = plt.subplot2grid((1,1),(0,0))
-      ax.set_ylabel('Generation (TWh/month)')
-      ax.set_xlim([-0.5,11.5])
-      ax.set_xticks(genMonthsWet.index, ['O', 'N', 'D', 'J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S'])
-      eb1 = ax.errorbar(genMonthsAverage.index-0.075, genMonthsAverage.meanHist,
-                         yerr=genMonthsAverage.stdHist, color=my_palette['average'], marker = '^', ms=4, mew=1, mec=my_palette['average'],
-                         linestyle='None')
-      eb1[-1][0].set_linewidth(2)
-      eb2 = ax.errorbar(genMonthsAverage.index+0.075, genMonthsAverage.meanSynth,
-                         yerr=genMonthsAverage.stdSynth, color=my_palette['average'], marker = '^', markerfacecolor='white',
-                         markeredgecolor=my_palette['average'], mew=1, ms=4,linestyle='None')
-      eb2[-1][0].set_linestyle('--')
-      eb2[-1][0].set_linewidth(2)
-      eb3 = ax.errorbar(genMonthsDry.index-0.375, genMonthsDry.meanHist,
-                         yerr=genMonthsDry.stdHist, color=my_palette['dry'], marker = 's', ms=4, mew=1, mec=my_palette['dry'],
-                         linestyle='None')
-      eb3[-1][0].set_linewidth(2)
-      eb4 = ax.errorbar(genMonthsDry.index-0.225, genMonthsDry.meanSynth,
-                         yerr=genMonthsDry.stdSynth, color=my_palette['dry'], marker = 's', markerfacecolor='white',
-                         markeredgecolor=my_palette['dry'], mew=1, ms=4,linestyle='None')
-      eb4[-1][0].set_linestyle('--')
-      eb4[-1][0].set_linewidth(2)
-      eb5 = ax.errorbar(genMonthsWet.index+0.225, genMonthsWet.meanHist,
-                         yerr=genMonthsWet.stdHist, color=my_palette['wet'], marker = 'o', ms=4, mew=1, mec=my_palette['wet'],
-                         linestyle='None')
-      eb5[-1][0].set_linewidth(2)
-      eb6 = ax.errorbar(genMonthsWet.index + 0.375, genMonthsWet.meanSynth,
-                         yerr=genMonthsWet.stdSynth, color=my_palette['wet'], marker = 'o', markerfacecolor='white',
-                         markeredgecolor=my_palette['wet'], mew=1, ms=4,linestyle='None')
-      eb6[-1][0].set_linestyle('--')
-      eb6[-1][0].set_linewidth(2)
-      for i in range(12):
-        ax.axvline(i + 0.5, color='lightgrey', lw=1)
+  for i in range(12):
+    ax.axvline(i + 0.5, color='lightgrey', lw=1)
 
-      if (genOnly == False):
-        leg1 = ax.legend((eb3,eb4,eb1,eb2,eb5,eb6),
-                  ('Dry Historic','Dry Synthetic','Avg Historic','Avg Synthetic','Wet Historic','Wet Synthetic'),
-                  bbox_to_anchor=(0.99, 0.95), ncol=1, borderaxespad=0.)
-      else:
-        leg1 = ax.legend((eb3,eb4,eb1,eb2,eb5,eb6),
-                  ('Dry Historic','Dry Synthetic','Avg Historic','Avg Synthetic','Wet Historic','Wet Synthetic'),
-                  loc='upper left', borderaxespad=0.)
-  if (genOnly == False):
-    # now plot historical vs synthetic power prices
-    powMonths = pd.DataFrame({'wmnth': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-                              'meanHist': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
-                                lambda x: power['priceMean'].loc[power['wmnth'] == x].mean()),
-                              'stdHist': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
-                                lambda x: power['priceMean'].loc[power['wmnth'] == x].std()),
-                              'meanSynth': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
-                                lambda x: powSynth['powPrice'].loc[powSynth['wmnth'] == x].mean()),
-                              'stdSynth': pd.DataFrame({'dum': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]})['dum'].apply(
-                                lambda x: powSynth['powPrice'].loc[powSynth['wmnth'] == x].std()),
-                              })
-
-    if (powerOnly == False):
-      ax = plt.subplot2grid((2,1), (1,0))
-    else:
-      ax = plt.subplot2grid((1,1),(0,0))
-    ax.set_xlabel('Month')
-    ax.set_ylabel('Price ($/MWh)')
-    ax.set_xlim([-0.5,11.5])
-
-    ax.set_xticks(powMonths.index)
-    ax.set_xticklabels(['O', 'N', 'D', 'J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S'])
-
-    eb1 = ax.errorbar(powMonths.index - 0.1, powMonths.meanHist,
-                       yerr=powMonths.stdHist, color=col[0], marker = 's', ms=4, mew=1, mec=col[0], linestyle='None')
-    eb1[-1][0].set_linewidth(2)
-    eb2 = ax.errorbar(powMonths.index + 0.1, powMonths.meanSynth,
-                       yerr=powMonths.stdSynth, color=col[0], marker = 's', markerfacecolor='white',
-                       markeredgecolor=col[0], mew=1, ms=4,linestyle='None')
-    eb2[-1][0].set_linestyle('--')
-    eb2[-1][0].set_linewidth(2)
-
-    for i in range(12):
-      ax.axvline(i + 0.5, color='lightgrey', lw=1)
-
-    if (powerOnly == False):
-      leg2 = ax.legend((eb1, eb2), ('Historic', 'Synthetic'), bbox_to_anchor=(0.99, 0.68), ncol=1, borderaxespad=0.)
-    else:
-      leg2 = ax.legend((eb1, eb2), ('Historic', 'Synthetic'), loc='upper right', borderaxespad=0.)
-
-  if ((powerOnly==False) & (genOnly==False)):
-    plot_name = dir_figs + 'fig4.jpg'
-    plt.savefig(plot_name, bbox_extra_artists=([leg1, leg2]), bbox_inches='tight', dpi=1200)
-  elif (powerOnly == False):
-    plot_name = dir_figs + 'historical_synthetic_generation.jpg'
-    plt.savefig(plot_name, bbox_extra_artists=([leg1]), bbox_inches='tight', dpi=1200)
-  elif (genOnly == False):
-    plot_name = dir_figs + 'historical_synthetic_power.jpg'
-    plt.savefig(plot_name, bbox_extra_artists=([leg2]), bbox_inches='tight', dpi=1200)
-
+  leg2 = ax.legend((eb1, eb2), ('Historic', 'Synthetic'), loc='right', bbox_to_anchor=(1.34, 0.48), ncol=1, borderaxespad=0.)
+    
+  plot_name = dir_figs + 'fig_synthGenPower.jpg'
+  plt.savefig(plot_name, bbox_extra_artists=([leg1, leg2]), bbox_inches='tight', dpi=1200)
+  
   return
 
 

@@ -38,7 +38,7 @@ print('Reading in stochastic data..., ', datetime.now() - startTime)
 synthetic_data = pd.read_csv(dir_generated_inputs + 'synthetic_data.txt', sep=' ')
 
 ### get historical simulation data
-historical_simulation = pd.read_csv(dir_generated_inputs + 'historical_simulation.csv', index_col=0)
+historical_data = pd.read_csv(dir_generated_inputs + 'historical_data.csv', index_col=0, sep=' ')
 
 # ### constants
 meanRevenue = np.mean(synthetic_data.revenue)
@@ -58,8 +58,9 @@ moea_solns_unfiltered = functions_moea_output_plots.get_moea_output(dir_generate
                                                                     debt_filter=False)
 
 ### choose 3 example policies for plotting from sfpuc baseline params
-cases_sfpuc_index = [1585,1595,1597]
-params_sfpuc = moea_solns_filtered.loc[moea_solns_filtered.p==p_sfpuc].iloc[0,:].loc[['Delta_debt','Delta_fund','c','delta','lam_prem_shift','expected_net_revenue']]
+cases_sfpuc_index = [1591,1579,1595]
+params_sfpuc = moea_solns_filtered.loc[moea_solns_filtered.p==p_sfpuc].iloc[0,:].loc[['Delta_debt','Delta_fund','c','delta','lam_capX_2','lam_capX_1',
+                                                                                      'lam_capX_0','lam_capY_2','lam_capY_1','lam_capY_0','expected_net_revenue']]
 
 
 
@@ -70,16 +71,17 @@ params_sfpuc = moea_solns_filtered.loc[moea_solns_filtered.p==p_sfpuc].iloc[0,:]
 
 
 
-### plot simulated state variables for 3 example policies over historical period
-print('Plotting historical simulation for 3 policies, sfpuc baseline... (fig 8), ', datetime.now() - startTime)
-functions_moea_output_plots.plot_example_simulations(dir_figs, moea_solns_filtered, params_sfpuc, cases_sfpuc_index, historical_simulation, meanRevenue)
+# ### plot simulated state variables for 3 example policies over historical period
+# print('Plotting historical simulation for 3 policies, sfpuc baseline... (fig 8), ', datetime.now() - startTime)
+# functions_moea_output_plots.plot_example_simulations(dir_figs, moea_solns_filtered, params_sfpuc, cases_sfpuc_index, historical_data, meanRevenue)
 
 
 # ### plot histogram of objectives for 3 policies for sfpuc baseline parameters (fig 9). Will also compare python objectives (validate) to c++ version (borg, retest) to validate monte carlo model
 # print('Plotting histogram of objectives for 3 policies, sfpuc baseline (fig 9)..., ', datetime.now() - startTime)
 # # index of 3 cases to highlight in plot [A = high cash flow, B = compromise, C = low debt]
 # importlib.reload(functions_moea_output_plots)
-# functions_moea_output_plots.plot_distribution_objectives(dir_figs, synthetic_data, moea_solns_filtered, cases_sfpuc_index, params_sfpuc, meanRevenue, nYears)
+# objectiveA, objectiveB, objectiveC = functions_moea_output_plots.get_distribution_objectives(dir_figs, synthetic_data, moea_solns_filtered, cases_sfpuc_index, params_sfpuc, meanRevenue, nYears)
+# functions_moea_output_plots.plot_distribution_objectives(dir_figs, synthetic_data, moea_solns_filtered, cases_sfpuc_index, params_sfpuc, meanRevenue, nYears, objectiveA, objectiveB, objectiveC)
 
 
 
@@ -119,18 +121,18 @@ functions_moea_output_plots.plot_example_simulations(dir_figs, moea_solns_filter
 # ### get runtime metrics for moea runs, baseline & sensitivity params
 # print('Getting runtime metrics for moea runs, baseline & sensitivity params..., ', datetime.now() - startTime)
 # importlib.reload(functions_moea_output_plots)
-# nSeedsBase = 50
-# nSeedsSensitivity = 10
-# nfe = 10000
-# metrics_seedsBase, metrics_seedsSensitivity, p_successes = \
-#   functions_moea_output_plots.get_metrics_all(dir_moea_output, p_sfpuc, nSeedsBase, nSeedsSensitivity)
+nSeedsBase = 50
+nSeedsSensitivity = 10
+nfe = 10000
+metrics_seedsBase, metrics_seedsSensitivity, p_successes = \
+  functions_moea_output_plots.get_metrics_all(dir_moea_output, p_sfpuc, nSeedsBase, nSeedsSensitivity)
 
 
 
-# ### plot hypervolume for baseline (50 seeds) + sample of 12 sensitivity analysis runs (10 seeds) (fig S4)
-# print('Plotting hypervolume (fig S4)..., ', datetime.now() - startTime)
-# importlib.reload(functions_moea_output_plots)
-# functions_moea_output_plots.plot_hypervolume(dir_figs, metrics_seedsBase, metrics_seedsSensitivity, p_successes, nSeedsBase, nSeedsSensitivity, nfe)
+### plot hypervolume for baseline (50 seeds) + sample of 12 sensitivity analysis runs (10 seeds) (fig S4)
+print('Plotting hypervolume (fig S4)..., ', datetime.now() - startTime)
+importlib.reload(functions_moea_output_plots)
+functions_moea_output_plots.plot_hypervolume(dir_figs, metrics_seedsBase, metrics_seedsSensitivity, p_successes, nSeedsBase, nSeedsSensitivity, nfe)
 
 # ### plot generational distance for baseline (50 seeds) + sample of 12 sensitivity analysis runs (10 seeds) (fig S5)
 # print('Plotting generational distance (fig S5)..., ', datetime.now() - startTime)
@@ -142,7 +144,7 @@ functions_moea_output_plots.plot_example_simulations(dir_figs, moea_solns_filter
 # importlib.reload(functions_moea_output_plots)
 # functions_moea_output_plots.plot_epsilon_indicator(dir_figs, metrics_seedsBase, metrics_seedsSensitivity, p_successes, nSeedsBase, nSeedsSensitivity, nfe)
 
-# print('Finished, ', datetime.now() - startTime)
+print('Finished, ', datetime.now() - startTime)
 
 
 

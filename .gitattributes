@@ -1,1 +1,0 @@
-data/generated_inputs/synthetic_data.txt filter=lfs diff=lfs merge=lfs -text
