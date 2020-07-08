@@ -123,15 +123,15 @@ fixedCostFraction =  0.914
 print('Generating simulated CFD net payouts..., ', datetime.now() - startTime)
 payoutPutSim = functions_revenues_contracts.snow_contract_payout(dir_generated_inputs, sweWtSynth, contractType='put',
                                                                lambdaRisk=0.25, strikeQuantile=0.5,
-                                                               redo=True, save = True)
+                                                               redo=False, save = False)
 
 payoutShortCallSim = functions_revenues_contracts.snow_contract_payout(dir_generated_inputs, sweWtSynth,
                                                                      contractType='shortcall', lambdaRisk=0.25,
-                                                                     strikeQuantile=0.5, redo=True, save = True)
+                                                                     strikeQuantile=0.5, redo=False, save = False)
 
 payoutCfdSim = functions_revenues_contracts.snow_contract_payout(dir_generated_inputs, sweWtSynth, contractType = 'cfd',
                                                                lambdaRisk = 0.25, strikeQuantile = 0.5,
-                                                               capQuantile = 0.95, redo = True, save = True)
+                                                               capQuantile = 0.95, redo = False, save = False)
 
 # payoutFebSim = functions_revenues_contracts.snow_contract_payout(dir_generated_inputs, sweSynth.danFeb, contractType = 'cfd',
 #                                                                lambdaRisk = 0.25, strikeQuantile = 0.5,
@@ -177,14 +177,14 @@ payoutCfdSim = functions_revenues_contracts.snow_contract_payout(dir_generated_i
 ### plot CFD contract as composite of put contract and short capped call contract (Fig S3)
 # importlib.reload(functions_revenues_contracts)
 # print('Plotting CFD contract as composite of put contract and short capped call contract (Fig S3)..., ', datetime.now() - startTime)
-# functions_revenues_contracts.plot_contract(dir_figs, sweWtSynth, payoutPutSim, payoutShortCallSim, payoutCfdSim,
-#                                        lambda_shifts=[0., 0.5], plot_type='composite')
+functions_revenues_contracts.plot_contract(dir_figs, sweWtSynth, payoutPutSim, payoutShortCallSim, payoutCfdSim,
+                                       lambda_shifts=[0., 0.5], plot_type='composite')
 
 
 # ### plot CFD contract with different loadings (fig 5)
 # print('Plotting CFD contract with different loadings (fig 5)..., ', datetime.now() - startTime)
-# functions_revenues_contracts.plot_contract(dir_figs, sweWtSynth, payoutPutSim, payoutShortCallSim, payoutCfdSim,
-#                                        lambda_shifts=[0., 0.5], plot_type='lambda')
+functions_revenues_contracts.plot_contract(dir_figs, sweWtSynth, payoutPutSim, payoutShortCallSim, payoutCfdSim,
+                                       lambda_shifts=[0., 0.5], plot_type='lambda')
 
 
 # ### plot of hedged & unhedged revenues in swe bins (fig 7)
@@ -198,7 +198,7 @@ payoutCfdSim = functions_revenues_contracts.snow_contract_payout(dir_generated_i
 
 # ### save data to use as inputs to moea for the current study
 # print('Saving synthetic data..., ', datetime.now() - startTime)
-functions_revenues_contracts.save_synthetic_data_moea(dir_generated_inputs, sweSynth, revSimWyr)
+# functions_revenues_contracts.save_synthetic_data_moea(dir_generated_inputs, sweSynth, revSimWyr)
 
 print('Finished, ', datetime.now() - startTime)
 

@@ -1214,7 +1214,7 @@ def plot_hypervolume(dir_figs, metrics_seedsBase, metrics_seedsSensitivity, p_su
   function_eval = np.arange(0, nfe+1, 200)
   plt.figure()
   ax = plt.subplot2grid((4,4),(0,0), rowspan=2, colspan=2)
-  ax.annotate('a)', xy=(0.01, 0.99), xycoords='axes fraction')
+  ax.annotate('a)', xy=(0.9, 0.04), xycoords='axes fraction')
   ax.tick_params(axis='x',which='both',labelbottom=False,labeltop=True)
   for s in range(1, (nSeedsBase+1)):
     hv = metrics_seedsBase[s - 1]['Hypervolume']
@@ -1228,17 +1228,21 @@ def plot_hypervolume(dir_figs, metrics_seedsBase, metrics_seedsSensitivity, p_su
   np.random.seed(7)
   param_samps = np.random.choice(p_successes, size=nsamp, replace=False)
   col_scal = np.arange(1,(nSeedsSensitivity+1))/11
+  letters = ['b)','c)','d)','e)','f)','g)','h)','i)','j)','k)','l)','m)']
   for j,p in enumerate(param_samps):
     if (j < 4):
       rj = int(j/2)
       cj = 2 + j - 2*rj
       ax = plt.subplot2grid((4,4), (rj, cj))
-      ax.annotate('c)', xy=(0.01, 0.95), xycoords='axes fraction')
+      ax.annotate(letters[j], xy=(0.8, 0.08), xycoords='axes fraction')
     else:
       rj = 2 + int((j-4)/ncol)
       cj = j+4 - ncol*rj
       ax = plt.subplot2grid((4,4), (rj, cj))
-      ax.annotate('c)', xy=(0.01, 0.95), xycoords='axes fraction')
+      if (j < 11):
+        ax.annotate(letters[j], xy=(0.8, 0.08), xycoords='axes fraction')
+      else:
+        ax.annotate(letters[j], xy=(0.7, 0.08), xycoords='axes fraction')
     if (rj == 0):
       ax.tick_params(axis='x', which='both', labelbottom=False, labeltop=True)
     elif (rj < ncol-1):
@@ -1277,8 +1281,9 @@ def plot_generational_distance(dir_figs, metrics_seedsBase, metrics_seedsSensiti
   for s in range(1, (nSeedsBase+1)):
     hv = metrics_seedsBase[s - 1]['GenerationalDistance']
     ax.plot(function_eval/1000, hv, c=cmap_vir(col_scal[s - 1]), alpha=0.7)
+    ax.annotate('a)', xy=(0.88, 0.88), xycoords='axes fraction')
   ax.set_yticks([0,0.1])
-  ax.set_ylim([-0.01, 0.11])
+  ax.set_ylim([-0.01, 0.15])
   ax.set_xticks([0,10])
   nsamp=12
   nrow=2
@@ -1286,15 +1291,21 @@ def plot_generational_distance(dir_figs, metrics_seedsBase, metrics_seedsSensiti
   np.random.seed(7)
   param_samps = np.random.choice(p_successes, size=nsamp, replace=False)
   col_scal = np.arange(1,(nSeedsSensitivity+1))/(nSeedsSensitivity+1)
+  letters = ['b)','c)','d)','e)','f)','g)','h)','i)','j)','k)','l)','m)']
   for j,p in enumerate(param_samps):
     if (j < 4):
       rj = int(j/2)
       cj = 2 + j - 2*rj
       ax = plt.subplot2grid((4,4), (rj, cj))
+      ax.annotate(letters[j], xy=(0.8, 0.75), xycoords='axes fraction')
     else:
       rj = 2 + int((j-4)/ncol)
       cj = j+4 - ncol*rj
       ax = plt.subplot2grid((4,4), (rj, cj))
+      if (j < 11):
+        ax.annotate(letters[j], xy=(0.8, 0.75), xycoords='axes fraction')
+      else:
+        ax.annotate(letters[j], xy=(0.7, 0.75), xycoords='axes fraction')
     if (rj == 0):
       ax.tick_params(axis='x', which='both', labelbottom=False, labeltop=True)
     elif (rj < ncol-1):
@@ -1307,12 +1318,12 @@ def plot_generational_distance(dir_figs, metrics_seedsBase, metrics_seedsSensiti
       i = nSeedsSensitivity * np.where(np.array(p_successes)==p)[0][0] + s - 1
       hv = metrics_seedsSensitivity[i]['GenerationalDistance']
       ax.plot(function_eval / 1000, hv, c=cmap_vir(col_scal[s - 1]), alpha=0.7)
-    ax.set_ylim([-0.01, 0.11])
+    ax.set_ylim([-0.01, 0.15])
     if (rj == 3)&(cj == 1):
       ax.set_xlabel('Thousands of Function Evaluations')
     if (rj == 2)&(cj == 0):
       ax.set_ylabel('Generational Distance')
-  plt.savefig(dir_figs + 'figS5.jpg', bbox_inches='tight', dpi=1200)
+  plt.savefig(dir_figs + 'fig_generationalDistance.jpg', bbox_inches='tight', dpi=1200)
 
   return
 
@@ -1331,6 +1342,7 @@ def plot_epsilon_indicator(dir_figs, metrics_seedsBase, metrics_seedsSensitivity
   for s in range(1, (nSeedsBase+1)):
     hv = metrics_seedsBase[s - 1]['EpsilonIndicator']
     ax.plot(function_eval/1000, hv, c=cmap_vir(col_scal[s - 1]), alpha=0.7)
+    ax.annotate('a)', xy=(0.88, 0.88), xycoords='axes fraction')
   ax.set_yticks([0,0.5])
   ax.set_ylim([-0.05, 0.55])
   ax.set_xticks([0,10])
@@ -1340,15 +1352,21 @@ def plot_epsilon_indicator(dir_figs, metrics_seedsBase, metrics_seedsSensitivity
   np.random.seed(7)
   param_samps = np.random.choice(p_successes, size=nsamp, replace=False)
   col_scal = np.arange(1,(nSeedsSensitivity+1))/(nSeedsSensitivity+1)
+  letters = ['b)','c)','d)','e)','f)','g)','h)','i)','j)','k)','l)','m)']
   for j,p in enumerate(param_samps):
     if (j < 4):
       rj = int(j/2)
       cj = 2 + j - 2*rj
       ax = plt.subplot2grid((4,4), (rj, cj))
+      ax.annotate(letters[j], xy=(0.8, 0.75), xycoords='axes fraction')
     else:
       rj = 2 + int((j-4)/ncol)
       cj = j+4 - ncol*rj
       ax = plt.subplot2grid((4,4), (rj, cj))
+      if (j < 11):
+        ax.annotate(letters[j], xy=(0.8, 0.75), xycoords='axes fraction')
+      else:
+        ax.annotate(letters[j], xy=(0.7, 0.75), xycoords='axes fraction')
     if (rj == 0):
       ax.tick_params(axis='x', which='both', labelbottom=False, labeltop=True)
     elif (rj < ncol-1):
@@ -1366,7 +1384,7 @@ def plot_epsilon_indicator(dir_figs, metrics_seedsBase, metrics_seedsSensitivity
       ax.set_xlabel('Thousands of Function Evaluations')
     if (rj == 2)&(cj == 0):
       ax.set_ylabel('Epsilon Indicator')
-  plt.savefig(dir_figs + 'figS6.jpg', bbox_inches='tight', dpi=1200)
+  plt.savefig(dir_figs + 'fig_epsilonIndicator.jpg', bbox_inches='tight', dpi=1200)
 
   return
 

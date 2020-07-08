@@ -189,7 +189,7 @@ def plot_empirical_synthetic_copula_swe(dir_figs, swe, startTime):
   plt.legend((l1, p1), ('Fitted copula', 'Observed data'))
   plt.xlabel('Theoretical order statistic')
   plt.ylabel('Observed order statistic')
-  plot_name = dir_figs + 'figS1.jpg'
+  plot_name = dir_figs + 'fig_sweCopula.jpg'
   plt.savefig(plot_name, dpi=1200)
 
 

@@ -408,10 +408,13 @@ def plot_contract(dir_figs, sweVal, payoutPutSim, payoutShortCallSim, payoutCfdS
                                         lam=lambda_shifts[i], k=strike, premOnly=True)
 
   ### plot regime as function of debt and uncertain params
-  fig = plt.figure(figsize=(7,4))
+  fig = plt.figure()
   gs1 = fig.add_gridspec(nrows=3, ncols=1, left=0, right=1, wspace=0.0, hspace=0.1)
   ax = fig.add_subplot(gs1[0,0])
+  ax.annotate('a)', xy=(0.96, 0.8), xycoords='axes fraction')
   ax2 = fig.add_subplot(gs1[1:,0])
+  ax2.annotate('b)', xy=(0.96, 0.9), xycoords='axes fraction')
+
   
   # ax.set_xlabel('SWE Index (inch)')
   ax.set_ylabel('Density')
@@ -436,8 +439,8 @@ def plot_contract(dir_figs, sweVal, payoutPutSim, payoutShortCallSim, payoutCfdS
   if (plot_type == 'lambda'):
     line4, = ax2.plot([0, kinkX, 60], [kinkX + kinkY + lambda_shifts[0], kinkY + lambda_shifts[0], kinkY + lambda_shifts[0]], color=col[0], ls='--', linewidth=2)
     line5, = ax2.plot([0, kinkX, 60], [kinkX + kinkY + lambda_shifts[1], kinkY + lambda_shifts[1], kinkY + lambda_shifts[1]], color=col[0], ls=':', linewidth=2)
-    plt.legend([line4,line3,line5],['No loading', 'Baseline loading', 'High loading'], loc='right', 
-                bbox_to_anchor=(1.34, 0.5), ncol=1, borderaxespad=0.)
+    plt.legend([line4,line3,line5],['No loading', 'Baseline loading', 'High loading'], loc='lower left', 
+                bbox_to_anchor=(0.01, 0.02), ncol=1, borderaxespad=0.)
     plot_name = dir_figs + 'fig_contractLambda.jpg'
   elif (plot_type=='composite'):
     # plot put
@@ -450,8 +453,8 @@ def plot_contract(dir_figs, sweVal, payoutPutSim, payoutShortCallSim, payoutCfdS
     kinkCapY = np.min(payoutShortCallSim)
     kinkCapX = np.min(sweVal.loc[payoutShortCallSim < kinkCapY + eps])
     line2, = ax2.plot([0, kinkStrikeX, kinkCapX, 60], [kinkStrikeY, kinkStrikeY, kinkCapY, kinkCapY], color=col[2], lw=2, ls='--')
-    plt.legend([line1,line2,line3],['Long put','Short capped call','Capped contract\nfor differences'], loc='right', 
-                bbox_to_anchor=(1.34, 0.5), ncol=1, borderaxespad=0.)
+    plt.legend([line1,line2,line3],['Long put','Short capped call','Capped contract\nfor differences'], loc='lower left',
+                bbox_to_anchor=(0.01, 0.02), ncol=1, borderaxespad=0.)
     plot_name = dir_figs + 'fig_contractComponents.jpg'
 
   plt.savefig(plot_name, bbox_inches='tight', dpi=1200)

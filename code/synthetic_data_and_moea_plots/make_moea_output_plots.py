@@ -62,7 +62,8 @@ cases_sfpuc_index = [1591,1579,1595]
 params_sfpuc = moea_solns_filtered.loc[moea_solns_filtered.p==p_sfpuc].iloc[0,:].loc[['Delta_debt','Delta_fund','c','delta','lam_capX_2','lam_capX_1',
                                                                                       'lam_capX_0','lam_capY_2','lam_capY_1','lam_capY_0','expected_net_revenue']]
 
-
+print(moea_solns_filtered.exp_ann_cashflow_retest.iloc[cases_sfpuc_index] / (meanRevenue * (1-0.914)) )
+print(moea_solns_filtered.q95_max_debt_retest.iloc[cases_sfpuc_index] / (meanRevenue * (1-0.914)) )
 
 ### plot Pareto front for sfpuc baseline parameters (fig 8)
 # print('Plotting Pareto set for baseline parameters... (fig 8), ', datetime.now() - startTime)
@@ -121,18 +122,18 @@ params_sfpuc = moea_solns_filtered.loc[moea_solns_filtered.p==p_sfpuc].iloc[0,:]
 # ### get runtime metrics for moea runs, baseline & sensitivity params
 # print('Getting runtime metrics for moea runs, baseline & sensitivity params..., ', datetime.now() - startTime)
 # importlib.reload(functions_moea_output_plots)
-nSeedsBase = 50
-nSeedsSensitivity = 10
-nfe = 10000
-metrics_seedsBase, metrics_seedsSensitivity, p_successes = \
-  functions_moea_output_plots.get_metrics_all(dir_moea_output, p_sfpuc, nSeedsBase, nSeedsSensitivity)
+# nSeedsBase = 50
+# nSeedsSensitivity = 10
+# nfe = 10000
+# metrics_seedsBase, metrics_seedsSensitivity, p_successes = \
+#   functions_moea_output_plots.get_metrics_all(dir_moea_output, p_sfpuc, nSeedsBase, nSeedsSensitivity)
 
 
 
 ### plot hypervolume for baseline (50 seeds) + sample of 12 sensitivity analysis runs (10 seeds) (fig S4)
 print('Plotting hypervolume (fig S4)..., ', datetime.now() - startTime)
-importlib.reload(functions_moea_output_plots)
-functions_moea_output_plots.plot_hypervolume(dir_figs, metrics_seedsBase, metrics_seedsSensitivity, p_successes, nSeedsBase, nSeedsSensitivity, nfe)
+# importlib.reload(functions_moea_output_plots)
+# functions_moea_output_plots.plot_hypervolume(dir_figs, metrics_seedsBase, metrics_seedsSensitivity, p_successes, nSeedsBase, nSeedsSensitivity, nfe)
 
 # ### plot generational distance for baseline (50 seeds) + sample of 12 sensitivity analysis runs (10 seeds) (fig S5)
 # print('Plotting generational distance (fig S5)..., ', datetime.now() - startTime)
