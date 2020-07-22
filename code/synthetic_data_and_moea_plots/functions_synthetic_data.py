@@ -19,6 +19,8 @@ from scipy.stats import gamma, lognorm, multivariate_normal, norm, t
 from datetime import datetime
 import sys
 import itertools
+import pycwt as wavelet
+
 
 sns.set_style('white')
 sns.set_context('paper', font_scale=1.55)
@@ -73,6 +75,365 @@ def synthetic_swe(dir_generated_inputs, swe, redo = False, save = False):
   return sweSynth
 
 
+
+##########################################################################
+######### function for taking wavelet transform and returning relevant variables ###########
+############## Returns values #########################################
+##########################################################################
+### adapted from http://regeirk.github.io/pycwt/pycwt.html
+
+def get_wavelet(dat, time, normalized=False, noise='white'):
+  N = dat.size
+  dt = 1  # In years
+
+  if normalized:
+    dat_norm = dat
+    var = dat_norm.var()
+  else:
+    # # We write the following code to detrend and normalize the input data by its
+    # # standard deviation. Sometimes detrending is not necessary and simply
+    # # removing the mean value is good enough. However, if your dataset has a well
+    # # defined trend, such as the Mauna Loa CO\ :sub:`2` dataset available in the
+    # # above mentioned website, it is strongly advised to perform detrending.
+    # # Here, we fit a one-degree polynomial function and then subtract it from the
+    # # original data.
+    t0 = time[0]
+    p = np.polyfit(t - t0, dat, 1)
+    dat_notrend = dat - np.polyval(p, t - t0)
+    std = dat_notrend.std()  # Standard deviation
+    dat_norm = dat_notrend / std  # Normalized dataset
+    # dat_norm = (dat - dat.mean()) / dat.std()
+    std = dat_norm.std()
+    var = std ** 2
+
+  # The next step is to define some parameters of our wavelet analysis. We
+  # select the mother wavelet, in this case the Morlet wavelet with
+  # :math:`\omega_0=6`.
+  mother = wavelet.Morlet(6)
+  s0 = 2 * dt  # Starting scale
+  dj = 1 / 12  # Twelve sub-octaves per octaves
+  J = 4 / dj  # Four powers of two with dj sub-octaves
+  if noise == 'red':
+    alpha, _, _ = wavelet.ar1(dat)  # Lag-1 autocorrelation for red noise
+  elif noise == 'white':
+    alpha = 0
+
+  # The following routines perform the wavelet transform and inverse wavelet
+  # transform using the parameters defined above. Since we have normalized our
+  # input time-series, we multiply the inverse transform by the standard
+  # deviation.
+  wave, scales, freqs, coi, fft, fftfreqs = wavelet.cwt(dat_norm, dt, dj, s0, J, mother)
+  iwave = wavelet.icwt(wave, scales, dt, dj, mother)  # * std
+
+  # We calculate the normalized wavelet and Fourier power spectra, as well as
+  # the Fourier equivalent periods for each wavelet scale.
+  power = (np.abs(wave)) ** 2
+  fft_power = np.abs(fft) ** 2
+  period = 1 / freqs
+
+  # We could stop at this point and plot our results. However we are also
+  # interested in the power spectra significance test. The power is significant
+  # where the ratio ``power / sig95 > 1``.
+  signif, fft_theor = wavelet.significance(1.0, dt, scales, 0, alpha, significance_level=0.95, wavelet=mother)
+  sig95 = np.ones([1, N]) * signif[:, None]
+  sig95 = power / sig95
+
+  # Then, we calculate the global wavelet spectrum and determine its
+  # significance level.
+  glbl_power = power.mean(axis=1)
+  dof = N - scales  # Correction for padding at edges
+  glbl_signif, tmp = wavelet.significance(var, dt, scales, 1, alpha, significance_level=0.95, dof=dof, wavelet=mother)
+
+  return var, period, power, sig95, dt, coi, glbl_signif, glbl_power, fft_theor, fft_power, fftfreqs
+
+
+
+##########################################################################
+######### plot of empirical vs synthetic copula for swe ###########
+############## Returns figure #########################################
+##########################################################################
+def plot_swe_trends(swe, sweSynth, dir_figs):
+  ####################
+  # regressions for feb & apr swe
+
+  fig = plt.figure(figsize=(10,10))
+  bx = plt.subplot2grid((3,6), (0,0), rowspan=1, colspan=3)
+  bx.annotate('a)', xy=(0.01, 0.89), xycoords='axes fraction')
+  sns.regplot(swe.index, swe.danFeb)
+  plt.axhline(swe.danFeb.mean(), color='k', ls='--')
+  bx.set_ylabel('SWE (inches)')
+  bx.set_xlabel('Year')
+  bx.set_xlim([swe.index.min()-5, swe.index.max()+5])
+  bx.set_ylim([0,65])
+
+  ax = plt.subplot2grid((3,6), (0,3), rowspan=1, colspan=3, sharex=bx, sharey=bx)
+  ax.annotate('b)', xy=(0.01, 0.89), xycoords='axes fraction')
+  sns.regplot(swe.index, swe.danApr)
+  plt.axhline(swe.danApr.mean(), color='k', ls='--')
+  ax.set_ylabel('SWE (inches)')
+  ax.set_xlabel('Year')
+
+  ###############
+  # get swe values normalized based on gamma quantile
+  shp_g_danFeb, dum, scl_g_danFeb = gamma.fit(swe.danFeb, floc=0)
+  shp_g_danApr, dum, scl_g_danApr = gamma.fit(swe.danApr, floc=0)
+
+  swe['normFeb'] = norm.ppf(gamma.cdf(swe.danFeb, a=shp_g_danFeb, loc=0, scale=scl_g_danFeb))
+  swe['normApr'] = norm.ppf(gamma.cdf(swe.danApr, a=shp_g_danApr, loc=0, scale=scl_g_danApr))
+  sweSynth['normFeb'] = norm.ppf(gamma.cdf(sweSynth.danFeb, a=shp_g_danFeb, loc=0, scale=scl_g_danFeb))
+  sweSynth['normApr'] = norm.ppf(gamma.cdf(sweSynth.danApr, a=shp_g_danApr, loc=0, scale=scl_g_danApr))
+  
+  ####################
+  # normalized wavelet power spectrum and significance
+  # level contour lines and cone of influece hatched area. Note that period
+  # scale is logarithmic.
+
+  dat = swe.normFeb.values
+  t = swe.index.values
+  var, period, power, sig95, dt, coi, glbl_signif, glbl_power, fft_theor, fft_power, fftfreqs = get_wavelet(dat, t, normalized=True)
+
+  cx = plt.subplot2grid((3,6), (1,0), rowspan=1, colspan=3, sharex=bx)
+  cx.annotate('c)', xy=(0.005, 0.89), xycoords='axes fraction')
+  levels = [0.0625, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16]
+  cx.contourf(t, np.log2(period), np.log2(power), np.log2(levels),
+              extend='both', cmap=cm.viridis)
+  extent = [t.min(), t.max(), 0, max(period)]
+  cx.contour(t, np.log2(period), sig95, [-99, 1], colors='k', linewidths=2,
+            extent=extent)
+  cx.fill(np.concatenate([t, t[-1:] + dt, t[-1:] + dt,
+                            t[:1] - dt, t[:1] - dt]),
+          np.concatenate([np.log2(coi), [1e-9], np.log2(period[-1:]),
+                            np.log2(period[-1:]), [1e-9]]),
+          'k', alpha=0.3, hatch='x')
+  cx.set_ylabel('Period (years)')
+  #
+  Yticks = 2 ** np.arange(np.ceil(np.log2(period.min())),
+                            np.ceil(np.log2(period.max())))
+  cx.set_yticks(np.log2(Yticks))
+  cx.set_yticklabels([str(int(x)) for x in Yticks])
+  cx.set_ylim(np.log2([period.min(), period.max()]))
+  cx.set_xlabel('Year')
+
+
+  ####################
+  # normalized wavelet power spectrum and significance
+  # level contour lines and cone of influece hatched area. Note that period
+  # scale is logarithmic.
+
+  dat = sweSynth.normFeb.values[:500]
+  t = sweSynth.index.values[:500]
+  var, period, power, sig95, dt, coi, glbl_signif, glbl_power, fft_theor, fft_power, fftfreqs = get_wavelet(dat, t, normalized=True)
+
+  dx = plt.subplot2grid((3,6), (2,0), rowspan=1, colspan=3, sharey=cx)
+  dx.annotate('d)', xy=(0.005, 0.89), xycoords='axes fraction')
+  levels = [0.0625, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16]
+  dx.contourf(t, np.log2(period), np.log2(power), np.log2(levels),
+              extend='both', cmap=cm.viridis)
+  extent = [t.min(), t.max(), 0, max(period)]
+  dx.contour(t, np.log2(period), sig95, [-99, 1], colors='k', linewidths=2,
+            extent=extent)
+  dx.fill(np.concatenate([t, t[-1:] + dt, t[-1:] + dt,
+                            t[:1] - dt, t[:1] - dt]),
+          np.concatenate([np.log2(coi), [1e-9], np.log2(period[-1:]),
+                            np.log2(period[-1:]), [1e-9]]),
+          'k', alpha=0.3, hatch='x')
+  dx.set_ylabel('Period (years)')
+  #
+  Yticks = 2 ** np.arange(np.ceil(np.log2(period.min())),
+                            np.ceil(np.log2(period.max())))
+  dx.set_yticks(np.log2(Yticks))
+  dx.set_yticklabels([str(int(x)) for x in Yticks])
+  dx.set_ylim(np.log2([period.min(), period.max()]))
+  dx.set_xlabel('Year')
+
+
+  # ####################
+  # # global wavelet and Fourier power spectra and theoretical
+  # # noise spectra. Note that period scale is logarithmic.
+
+  # ax = plt.subplot2grid((3,6), (1,3), rowspan=1, colspan=3, sharey=cx)
+  # ax.annotate('d)', xy=(0.01, 0.89), xycoords='axes fraction')
+  # ax.plot(glbl_signif, np.log2(period), 'k--')
+  # ax.plot(var * fft_theor, np.log2(period), '--', color='#cccccc')
+  # ax.plot(var * fft_power, np.log2(1./fftfreqs), '-', color='#cccccc',
+  #         linewidth=1.)
+  # ax.plot(var * glbl_power, np.log2(period), 'k-', linewidth=1.5)
+  # ax.set_xlabel('Power (unitless$^2$)')
+  # ax.set_ylabel('Period (years)')
+  # ax.set_xlim([0, glbl_power.max() + var])
+  # ax.set_yticks(np.log2(Yticks))
+  # ax.set_yticklabels([str(int(x)) for x in Yticks])
+
+  ####################
+  # normalized wavelet power spectrum and significance
+  # level contour lines and cone of influece hatched area. Note that period
+  # scale is logarithmic.
+
+  dat = swe.normApr.values
+  t = swe.index
+  var, period, power, sig95, dt, coi, glbl_signif, glbl_power, fft_theor, fft_power, fftfreqs = get_wavelet(dat, t, normalized=True)
+
+  ax = plt.subplot2grid((3,6), (1,3), rowspan=1, colspan=3, sharex=bx, sharey=cx)
+  ax.annotate('e)', xy=(0.01, 0.89), xycoords='axes fraction')
+  levels = [0.0625, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16]
+  ax.contourf(t, np.log2(period), np.log2(power), np.log2(levels),
+              extend='both', cmap=cm.viridis)
+  extent = [t.min(), t.max(), 0, max(period)]
+  ax.contour(t, np.log2(period), sig95, [-99, 1], colors='k', linewidths=2,
+            extent=extent)
+  ax.fill(np.concatenate([t, t[-1:], t[-1:],
+                            t[:1], t[:1]]),
+          np.concatenate([np.log2(coi), [1e-9], np.log2(period[-1:]),
+                            np.log2(period[-1:]), [1e-9]]),
+          'k', alpha=0.3, hatch='x')
+  ax.set_ylabel('Period (years)')
+  #
+  Yticks = 2 ** np.arange(np.ceil(np.log2(period.min())),
+                            np.ceil(np.log2(period.max())))
+  ax.set_yticks(np.log2(Yticks))
+  ax.set_yticklabels([str(int(x)) for x in Yticks])
+  ax.set_ylim(np.log2([period.min(), period.max()]))
+  ax.set_xlabel('Year')
+
+
+  ####################
+  # normalized wavelet power spectrum and significance
+  # level contour lines and cone of influece hatched area. Note that period
+  # scale is logarithmic.
+
+  dat = sweSynth.normApr.values[:500]
+  t = sweSynth.index.values[:500]
+  var, period, power, sig95, dt, coi, glbl_signif, glbl_power, fft_theor, fft_power, fftfreqs = get_wavelet(dat, t, normalized=True)
+
+  ax = plt.subplot2grid((3,6), (2,3), rowspan=1, colspan=3, sharey=cx, sharex=dx)
+  ax.annotate('f)', xy=(0.005, 0.89), xycoords='axes fraction')
+  levels = [0.0625, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16]
+  ax.contourf(t, np.log2(period), np.log2(power), np.log2(levels),
+              extend='both', cmap=cm.viridis)
+  extent = [t.min(), t.max(), 0, max(period)]
+  ax.contour(t, np.log2(period), sig95, [-99, 1], colors='k', linewidths=2,
+            extent=extent)
+  ax.fill(np.concatenate([t, t[-1:] + dt, t[-1:] + dt,
+                            t[:1] - dt, t[:1] - dt]),
+          np.concatenate([np.log2(coi), [1e-9], np.log2(period[-1:]),
+                            np.log2(period[-1:]), [1e-9]]),
+          'k', alpha=0.3, hatch='x')
+  ax.set_ylabel('Period (years)')
+  #
+  Yticks = 2 ** np.arange(np.ceil(np.log2(period.min())),
+                            np.ceil(np.log2(period.max())))
+  ax.set_yticks(np.log2(Yticks))
+  ax.set_yticklabels([str(int(x)) for x in Yticks])
+  ax.set_ylim(np.log2([period.min(), period.max()]))
+  ax.set_xlabel('Year')
+
+
+  # ####################
+  # # global wavelet and Fourier power spectra and theoretical
+  # # noise spectra. Note that period scale is logarithmic.
+
+  # ax = plt.subplot2grid((3,6), (2,3), rowspan=1, colspan=3, sharey=cx)
+  # ax.annotate('f)', xy=(0.01, 0.89), xycoords='axes fraction')
+  # ax.plot(glbl_signif, np.log2(period), 'k--')
+  # ax.plot(var * fft_theor, np.log2(period), '--', color='#cccccc')
+  # ax.plot(var * fft_power, np.log2(1./fftfreqs), '-', color='#cccccc',
+  #         linewidth=1.)
+  # ax.plot(var * glbl_power, np.log2(period), 'k-', linewidth=1.5)
+  # ax.set_xlabel(r'Power (unitless$^2$)')
+  # ax.set_ylabel('Period (years)')
+  # ax.set_xlim([0, glbl_power.max() + var])
+  # ax.set_yticks(np.log2(Yticks))
+  # ax.set_yticklabels([str(int(x)) for x in Yticks])
+
+  ####################
+
+  plt.tight_layout(pad=0.4, w_pad=1.0, h_pad=1.0)
+  plot_name = dir_figs + 'fig_sweTrends.jpg'
+  plt.savefig(plot_name, dpi=1200)
+
+
+
+##########################################################################
+######### function for plotting swe multi-year exceedence probabilities ###########
+############## Returns values #########################################
+##########################################################################
+
+def plot_swe_exceedence(swe, sweSynth, dir_figs):
+  ### Exceedence curves for snowfall, with different moving avg windows
+  obsF = np.array(swe.danFeb.values)
+  obsA = np.array(swe.danApr.values)
+  syn = np.array([sweSynth.danFeb.values,sweSynth.danApr.values])
+  nyr = len(obsF)
+  nsyn = syn.shape[1]
+  nsamp = 100
+
+  probs = {1: [n/(nyr+1) for n in range(nyr, 0, -1)],
+            2: [n/(nyr) for n in range(nyr-1, 0, -1)],
+            4: [n/(nyr-2) for n in range(nyr-3, 0, -1)],
+            8: [n/(nyr-6) for n in range(nyr-7, 0, -1)],
+            16: [n/(nyr-14) for n in range(nyr-15, 0, -1)]}
+
+  exceedence = {}
+  exceedence[1]  = {'obsF': [np.sort(obsF)], 'obsA': [np.sort(obsA)], 'synF':[], 'synA':[]}
+  exceedence[2]  = {'obsF': [np.sort((obsF[:-1] + obsF[1:])/2)], 'obsA': [np.sort((obsA[:-1] + obsA[1:])/2)], 'synF':[], 'synA':[]}
+  exceedence[4]  = {'obsF': [np.sort((obsF[:-3] + obsF[1:-2] + obsF[2:-1] + obsF[3:])/4)], 'synF':[], 'synA':[]}
+  exceedence[4]['obsA']  = [np.sort((obsA[:-3] + obsA[1:-2] + obsA[2:-1] + obsA[3:])/4)]
+  exceedence[8]  = {'obsF': [np.sort((obsF[:-7] + obsF[1:-6] + obsF[2:-5] + obsF[3:-4] + obsF[4:-3] + obsF[5:-2] + obsF[6:-1] + obsF[7:])/8)], 'synF':[], 'synA':[]}
+  exceedence[8]['obsA']  = [np.sort((obsA[:-7] + obsA[1:-6] + obsA[2:-5] + obsA[3:-4] + obsA[4:-3] + obsA[5:-2] + obsA[6:-1] + obsA[7:])/8)]
+  exceedence[16]  = {'obsF': [np.sort((obsF[:-15] + obsF[1:-14] + obsF[2:-13] + obsF[3:-12] + obsF[4:-11] + obsF[5:-10] + obsF[6:-9] + obsF[7:-8] + obsF[8:-7] + obsF[9:-6] + obsF[10:-5] + obsF[11:-4] + obsF[12:-3] + obsF[13:-2] + obsF[14:-1] + obsF[15:])/16)], 'synF':[], 'synA':[]}
+  exceedence[16]['obsA'] = [np.sort((obsA[:-15] + obsA[1:-14] + obsA[2:-13] + obsA[3:-12] + obsA[4:-11] + obsA[5:-10] + obsA[6:-9] + obsA[7:-8] + obsA[8:-7] + obsA[9:-6] + obsA[10:-5] + obsA[11:-4] + obsA[12:-3] + obsA[13:-2] + obsA[14:-1] + obsA[15:])/16)]
+
+  for i in range(nsamp):
+    choice = np.random.choice(range(nsyn-nyr))
+    dum = syn[:,choice:choice+nyr]
+    exceedence[1]['synF'].append(np.sort(dum[0,:]))
+    exceedence[1]['synA'].append(np.sort(dum[1,:]))
+
+    exceedence[2]['synF'].append(np.sort((dum[0,:nyr-1] + dum[0,1:nyr])/2))
+    exceedence[2]['synA'].append(np.sort((dum[1,:nyr-1] + dum[1,1:nyr])/2))
+
+    exceedence[4]['synF'].append(np.sort((dum[0,:nyr-3] + dum[0,1:nyr-2] + dum[0,2:nyr-1] + dum[0,3:nyr])/4))
+    exceedence[4]['synA'].append(np.sort((dum[1,:nyr-3] + dum[1,1:nyr-2] + dum[1,2:nyr-1] + dum[1,3:nyr])/4))
+
+    exceedence[8]['synF'].append(np.sort((dum[0,:nyr-7] + dum[0,1:nyr-6] + dum[0,2:nyr-5] + dum[0,3:nyr-4] + dum[0,4:nyr-3] + dum[0,5:nyr-2] + dum[0,6:nyr-1] + dum[0,7:nyr])/8))
+    exceedence[8]['synA'].append(np.sort((dum[1,:nyr-7] + dum[1,1:nyr-6] + dum[1,2:nyr-5] + dum[1,3:nyr-4] + dum[1,4:nyr-3] + dum[1,5:nyr-2] + dum[1,6:nyr-1] + dum[1,7:nyr])/8))
+
+    exceedence[16]['synF'].append(np.sort((dum[0,:nyr-15] + dum[0,1:nyr-14] + dum[0,2:nyr-13] + dum[0,3:nyr-12] + dum[0,4:nyr-11] + dum[0,5:nyr-10] + dum[0,6:nyr-9] + dum[0,7:nyr-8] + dum[0,8:nyr-7] + dum[0,9:nyr-6] + dum[0,10:nyr-5] + dum[0,11:nyr-4] + dum[0,12:nyr-3] + dum[0,13:nyr-2] + dum[0,14:nyr-1] + dum[0,15:nyr])/16))
+    exceedence[16]['synA'].append(np.sort((dum[1,:nyr-15] + dum[1,1:nyr-14] + dum[1,2:nyr-13] + dum[1,3:nyr-12] + dum[1,4:nyr-11] + dum[1,5:nyr-10] + dum[1,6:nyr-9] + dum[1,7:nyr-8] + dum[1,8:nyr-7] + dum[1,9:nyr-6] + dum[1,10:nyr-5] + dum[1,11:nyr-4] + dum[1,12:nyr-3] + dum[1,13:nyr-2] + dum[1,14:nyr-1] + dum[1,15:nyr])/16))
+
+  # now plot exceedence curves for 1,2,4,8,16 year droughts
+  fig = plt.figure(figsize=(10,8))
+  labels = [['a)','b)','c)','d)','e)'],['f)','g)','h)','i)','j)']]
+  for mi, ma in enumerate([1,2,4,8,16]):
+    for i,k in enumerate(['F', 'A']):
+      q01, q05, q95, q99 = [], [], [], []
+      for q in range(len(probs[ma])):
+        q01.append(np.quantile([exceedence[ma]['syn'+k][i][q] for i in range(nsamp)], 0.001))
+        q05.append(np.quantile([exceedence[ma]['syn'+k][i][q] for i in range(nsamp)], 0.05))
+        q95.append(np.quantile([exceedence[ma]['syn'+k][i][q] for i in range(nsamp)], 0.95))
+        q99.append(np.quantile([exceedence[ma]['syn'+k][i][q] for i in range(nsamp)], 0.999))
+      ax = plt.subplot2grid((2,5), (i, mi))
+      ax.fill_between(probs[ma], q99, q01, color='indianred', alpha=0.3)
+      ax.fill_between(probs[ma], q95, q05, color='indianred', alpha=0.5)        
+      ax.plot(probs[ma], exceedence[ma]['obs'+k][0], c='k', alpha=1)
+      ax.set_xlim([0,1])
+      ax.set_ylim([0,80])
+      ax.set_xticks([0,1])
+      ax.annotate(labels[i][mi], xy=(0.85, 0.93), xycoords='axes fraction')
+      if mi > 0:
+        ax.set_yticks([])
+      else:
+        ax.set_ylabel('SWE (inch)')
+        ax.set_yticks([0,25,50,75])
+      if i < 1:
+        ax.set_xticks([])
+      else:
+        if mi == 2:
+          ax.set_xlabel('Exceedance\nprobability')
+
+  plt.tight_layout(pad=0., w_pad=0.2, h_pad=0.1)
+  plot_name = dir_figs + 'fig_sweExceedance.jpg'
+  plt.savefig(plot_name, dpi=1200)
 
 ##########################################################################
 ######### plot of empirical vs synthetic copula for swe ###########
