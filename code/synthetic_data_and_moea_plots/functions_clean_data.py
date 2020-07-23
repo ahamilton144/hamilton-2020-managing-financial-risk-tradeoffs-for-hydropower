@@ -180,8 +180,8 @@ def get_historical_SFPUC_sales():
   # plt.ylabel('Revenue ($M)')
   # plt.show()
 
-  # sbn.set_context('paper', font_scale=1.55)
-  # sbn.regplot(x='swe', y='gen', data=pd.DataFrame({'gen': genWY['tot']/1000, 'swe': swe['danFeb'].loc[2002:2016]*32/40.7+swe['danFeb'].loc[2002:2016]*8.7/40.7}))
+  # sns.set_context('paper', font_scale=1.55)
+  # sns.regplot(x='swe', y='gen', data=pd.DataFrame({'gen': genWY['tot']/1000, 'swe': swe['danFeb'].loc[2002:2016]*32/40.7+swe['danFeb'].loc[2002:2016]*8.7/40.7}))
   # plt.xlabel('Weighted SWE (in)')
   # plt.ylabel('Hydropower generation (GWh/yr)')
   # plt.title('Hetch Hetchy Snowpack Index')
