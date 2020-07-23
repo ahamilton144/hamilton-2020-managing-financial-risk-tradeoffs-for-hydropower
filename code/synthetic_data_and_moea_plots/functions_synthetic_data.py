@@ -200,8 +200,8 @@ def plot_swe_trends(swe, sweSynth, dir_figs):
   extent = [t.min(), t.max(), 0, max(period)]
   cx.contour(t, np.log2(period), sig95, [-99, 1], colors='k', linewidths=2,
             extent=extent)
-  cx.fill(np.concatenate([t, t[-1:] + dt, t[-1:] + dt,
-                            t[:1] - dt, t[:1] - dt]),
+  cx.fill(np.concatenate([t, t[-1:], t[-1:],
+                            t[:1], t[:1]]),
           np.concatenate([np.log2(coi), [1e-9], np.log2(period[-1:]),
                             np.log2(period[-1:]), [1e-9]]),
           'k', alpha=0.3, hatch='x')
@@ -225,15 +225,15 @@ def plot_swe_trends(swe, sweSynth, dir_figs):
   var, period, power, sig95, dt, coi, glbl_signif, glbl_power, fft_theor, fft_power, fftfreqs = get_wavelet(dat, t, normalized=True)
 
   dx = plt.subplot2grid((3,6), (2,0), rowspan=1, colspan=3, sharey=cx)
-  dx.annotate('d)', xy=(0.005, 0.89), xycoords='axes fraction')
+  dx.annotate('e)', xy=(0.005, 0.89), xycoords='axes fraction')
   levels = [0.0625, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16]
   dx.contourf(t, np.log2(period), np.log2(power), np.log2(levels),
               extend='both', cmap=cm.viridis)
   extent = [t.min(), t.max(), 0, max(period)]
   dx.contour(t, np.log2(period), sig95, [-99, 1], colors='k', linewidths=2,
             extent=extent)
-  dx.fill(np.concatenate([t, t[-1:] + dt, t[-1:] + dt,
-                            t[:1] - dt, t[:1] - dt]),
+  dx.fill(np.concatenate([t, t[-1:], t[-1:],
+                            t[:1], t[:1]]),
           np.concatenate([np.log2(coi), [1e-9], np.log2(period[-1:]),
                             np.log2(period[-1:]), [1e-9]]),
           'k', alpha=0.3, hatch='x')
@@ -245,6 +245,8 @@ def plot_swe_trends(swe, sweSynth, dir_figs):
   dx.set_yticklabels([str(int(x)) for x in Yticks])
   dx.set_ylim(np.log2([period.min(), period.max()]))
   dx.set_xlabel('Year')
+  dx.set_xlim([t[0]-40, t[-1]+40])
+
 
 
   # ####################
@@ -274,7 +276,7 @@ def plot_swe_trends(swe, sweSynth, dir_figs):
   var, period, power, sig95, dt, coi, glbl_signif, glbl_power, fft_theor, fft_power, fftfreqs = get_wavelet(dat, t, normalized=True)
 
   ax = plt.subplot2grid((3,6), (1,3), rowspan=1, colspan=3, sharex=bx, sharey=cx)
-  ax.annotate('e)', xy=(0.01, 0.89), xycoords='axes fraction')
+  ax.annotate('d)', xy=(0.01, 0.89), xycoords='axes fraction')
   levels = [0.0625, 0.125, 0.25, 0.5, 1, 2, 4, 8, 16]
   ax.contourf(t, np.log2(period), np.log2(power), np.log2(levels),
               extend='both', cmap=cm.viridis)
@@ -313,8 +315,8 @@ def plot_swe_trends(swe, sweSynth, dir_figs):
   extent = [t.min(), t.max(), 0, max(period)]
   ax.contour(t, np.log2(period), sig95, [-99, 1], colors='k', linewidths=2,
             extent=extent)
-  ax.fill(np.concatenate([t, t[-1:] + dt, t[-1:] + dt,
-                            t[:1] - dt, t[:1] - dt]),
+  ax.fill(np.concatenate([t, t[-1:], t[-1:],
+                            t[:1], t[:1]]),
           np.concatenate([np.log2(coi), [1e-9], np.log2(period[-1:]),
                             np.log2(period[-1:]), [1e-9]]),
           'k', alpha=0.3, hatch='x')
@@ -365,7 +367,7 @@ def plot_swe_exceedence(swe, sweSynth, dir_figs):
   syn = np.array([sweSynth.danFeb.values,sweSynth.danApr.values])
   nyr = len(obsF)
   nsyn = syn.shape[1]
-  nsamp = 100
+  nsamp = 10000
 
   probs = {1: [n/(nyr+1) for n in range(nyr, 0, -1)],
             2: [n/(nyr) for n in range(nyr-1, 0, -1)],

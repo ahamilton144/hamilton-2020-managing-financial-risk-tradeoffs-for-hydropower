@@ -174,65 +174,6 @@ def plot_SweFebApr_SweGen_SweRev(dir_figs, swe, gen, revHist, sweSynth, genSynth
 
 
 
-# ##########################################################################
-# ######### plot synthetic feb 1 vs apr 1 swe, sweWt vs gen, sweWt vs revenue (fig 3)###########
-# ############## Returns figure #########################################
-# ##########################################################################
-
-# def plot_SweFebApr_SweGen_SweRev(dir_figs, swe, gen, revHist, sweSynth, genSynth, revSim, sweWtParams,
-#                                 MEAN_REVENUE, COST_FRACTION, histRev):
-#   nYr = int(len(revSim) / 12)
-#   yrSim = np.full((1, nYr * 12), 0)
-#   for i in range(1, nYr):
-#     yrSim[0, (12 * i):(12 * (i + 1))] = i
-#   revSimWyr = revSim.groupby(yrSim[0, :(nYr * 12)]).sum()
-#   revHistWyr = revHist.groupby('wyear').rev.sum()
-#   revSimWyr = revSimWyr - MEAN_REVENUE*COST_FRACTION
-#   revHistWyr = revHistWyr - MEAN_REVENUE*COST_FRACTION
-
-#   genSynthWyr = genSynth.groupby('wyr').sum()
-#   genWyr = gen.groupby('wyear').sum()
-
-#   sweWtSynth = (sweWtParams[0] * sweSynth.danFeb + sweWtParams[1] * sweSynth.danApr)
-#   sweWtHist = (sweWtParams[0] * swe.danFeb + sweWtParams[1] * swe.danApr)
-#   genSynthWyr['sweWt'] = (sweWtParams[0] * genSynthWyr['sweFeb'] + sweWtParams[1] * genSynthWyr['sweApr'])
-#   genWyr['sweWt'] = (sweWtParams[0] * genWyr['sweFeb'] + sweWtParams[1] * genWyr['sweApr'])
-
-#   plt.figure()
-#   ax = plt.subplot2grid((2, 3), (0, 0))
-#   ax.set_xlabel('Feb 1 SWE (inch)')
-#   ax.set_ylabel('Apr 1 SWE (inch)')
-#   ax.xaxis.set_label_position('top')
-#   ax.set_xticks(np.arange(0,76,25))
-#   ax.set_yticks(np.arange(0,76,25))
-#   ax.tick_params(axis='x', which='both', labelbottom=False, labeltop=True)
-#   ax.scatter(sweSynth.danFeb.iloc[:500], sweSynth.danApr.iloc[:500], marker='o', facecolors='none',
-#               linewidth=1, alpha=0.7, edgecolors=col[3], s=30)
-#   ax.scatter(swe.danFeb, swe.danApr, color=col[0], alpha=0.6, marker='^', s=40)
-
-#   ax = plt.subplot2grid((2, 3), (1, 0))
-#   ax.set_xlabel('SWE Index (inch)')
-#   ax.set_ylabel('Generation (TWh/yr)')
-#   ax.set_xticks(np.arange(0,76,25))
-#   p1 = ax.scatter(sweWtSynth.iloc[:500], genSynthWyr.gen.iloc[:500]/1000, marker='o', facecolors='none',
-#               linewidth=1, alpha=0.7, edgecolors=col[3], s=30)
-#   p2 = ax.scatter(sweWtHist.loc[1988:], genWyr.tot/1000, color=col[0], alpha=0.6, marker='^', s=40)
-
-#   ax = plt.subplot2grid((2, 3), (0, 1), rowspan=2, colspan=2)
-#   ax.set_xlabel('SWE Index (inch)')
-#   ax.set_ylabel('Net Revenue ($M/year)')
-#   ax.yaxis.set_label_position('right')
-#   ax.set_xticks(np.arange(0,76,25))
-#   ax.tick_params(axis='y', which='both', labelleft=False, labelright=True)
-#   plt.axhline(0,ls=':',c='lightgrey')
-#   ax.scatter(sweWtSynth.iloc[:500], revSimWyr.iloc[:500], marker='o', facecolors='none',
-#               linewidth=1, alpha=0.7, edgecolors=col[3], s=30)
-#   if (histRev):
-#     ax.scatter(sweWtHist.loc[1988:], revHistWyr, alpha=0.6, color=col[0], marker='^', s=40)
-#   ax.legend([p1,p2], ['Synthetic', 'Historic'], loc='lower right')
-#   plt.savefig(dir_figs + 'fig3.jpg', bbox_inches='tight', dpi=1200)
-
-
 
 ##########################################################################
 ######### wang transform function ###########
