@@ -1,5 +1,5 @@
 # hamilton-2020-managing-financial-risk-tradeoffs-for-hydropower
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3627730.svg)](https://doi.org/10.5281/zenodo.3627730) 
+[![DOI](https://zenodo.org/badge/232390353.svg)](https://zenodo.org/badge/latestdoi/232390353)
 
 This repository contains all code and data (included data for figures) for the following paper:
 
