@@ -1194,7 +1194,8 @@ def get_metrics_all(dir_moea_output, p_sfpuc, nSeedsBase, nSeedsSensitivity):
         if (s == 1):
           p_successes.append(p)
       except:
-        print(p, ' fail')
+        # print(p, ' fail')
+        dum = 0
 
   return(metrics_seedsBase, metrics_seedsSensitivity, p_successes)
 
