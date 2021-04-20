@@ -31,10 +31,7 @@ Licensed under the GNU General Public License v3.0. In building the multi-object
 
 ## Setup
 * Clone the model from this GitHub repository
-* Install Python dependencies in virtual environment. All synthetic data generation, data analysis, and figure production are set up to run on my Windows laptop, using a linux bash shell (WSL, Ubuntu 18.04 LTS), and Python 3.6.9. All Python dependencies can be installed with pip using the steps below. If using a different setup, you may have to make alterations to this workflow - If using a different package manager than pip (such as Anaconda), install the packages listed in `code/requirements.txt`.
-  * `python3 -m venv .venv` - This will create a virtual environment.
-  * `source .venv/bin/activate` - Activate virtual environment.
-  * `pip3 install -r requirements.txt`
+* Install Python dependencies in virtual environment. All synthetic data generation, data analysis, and figure production are set up to run on my Windows laptop, using a linux bash shell (WSL, Ubuntu 18.04 LTS), and Python 3.6.9. All Python dependencies can be installed with pip or Anaconda (you can find all dependencies at the top of the Python files in ``code``). 
 * Optimization set up to run on [THECUBE](https://www.cac.cornell.edu/wiki/index.php?title=THECUBE_Cluster), a cluster housed at Cornell University. THECUBE uses the slurm scheduler. Submission scripts and makefiles may need to be altered to accomodate different setups.
 * Additional software
   * Download the [Borg MOEA](http://borgmoea.org/) source code
